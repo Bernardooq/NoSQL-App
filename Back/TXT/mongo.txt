@@ -1,0 +1,11 @@
+
+docker run --name appMongo -d -p 27017:27017 mongo
+docker exec -it appMongo mongosh
+use app
+
+db.createCollection("users")
+db.createCollection("products")
+db.createCollection("carts")
+db.createCollection("wishlist")
+db.createCollection("returns")
+db.createCollection("points")
