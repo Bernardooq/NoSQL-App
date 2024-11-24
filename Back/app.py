@@ -80,20 +80,26 @@ def user_registration():
     username = input("Username: ")
     email = input("Email: ")
     password = input("Password: ")
-    
+
     response = requests.post(f"{API_URL}/register", json={
         "username": username,
         "email": email,
         "password": password
     })
     
+    try:
+        response_data = response.json()
+    except requests.exceptions.JSONDecodeError:
+        response_data = response.text or "No response content"
+
     if response.status_code == 201:
         print("Registration successful!")
-        return response.json()
+        return response_data
     else:
-        print("Registration failed:", response.json())
+        print("Registration failed:", response_data)
         return ''
 
+    
 def user_login():
     print("\n--- User Login ---")
     email = input("Email: ")
