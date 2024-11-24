@@ -6,9 +6,13 @@ import uuid
 
 import time_uuid
 from cassandra.query import BatchStatement
+from cassandra.cluster import Cluster
 
-# Set logger
-log = logging.getLogger()
+def init_cassandra(cassandra_uri, keyspace):
+    cluster = Cluster([cassandra_uri])
+    session = cluster.connect()
+    session.set_keyspace(keyspace)
+    return session
 
 CREATE_KEYSPACE = """
         CREATE KEYSPACE IF NOT EXISTS {}
