@@ -89,8 +89,24 @@ def user_registration():
     
     if response.status_code == 201:
         print("Registration successful!")
+        return response.json()
     else:
         print("Registration failed:", response.json())
+        return ''
+
+def user_login():
+    print("\n--- User Login ---")
+    email = input("Email: ")
+    password = input("Password: ")
+    response = requests.post(f"{API_URL}/login", json = {"email": email, "password": password})
+
+    if response.status_code == 200:
+        print("Login successful")
+        return response.json()
+    else:
+        print("Login failed: ", response.json())
+        return ''
+
 
 def update_profile():
     print("\n--- Update Profile ---")
@@ -228,5 +244,26 @@ def admin_dashboard():
 def logout():
     print("You have been logged out.")
 
+def menu():
+    menu1flag = True
+    menu2flag = False
+    data= ''
+    while(menu1flag):
+        print("\n--- Menu ---")
+        (print("1. Login\n2. Create account"))
+        option= int(input("Select an option: "))
+        if option ==1:
+            data= user_login()  
+            if data != '': 
+                menu2flag = True
+                menu1flag = False
+        elif option == 2:
+            data = user_registration()
+            if data != '': 
+                menu2flag = True
+                menu1flag = False
+    while (menu2flag):
+        main_menu()
+
 if __name__ == "__main__":
-    main_menu()
+    menu()
