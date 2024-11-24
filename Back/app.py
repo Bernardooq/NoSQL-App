@@ -18,8 +18,8 @@ def main_menu():
         print("9. Search Products")
         print("10. Wishlist")
         print("11. Order Tracking")
-        print("12. Admin Dashboard")
-        print("13. Logout")
+        print("12. Sell New Products")
+        print("13. My Products")
         print("0. Exit")
         
         choice = input("Select an option: ")
@@ -49,7 +49,7 @@ def main_menu():
         elif choice == "12":
             sell_product()
         elif choice == "13":
-            logout()
+            view_my_products()
         elif choice == "0":
             print("Exiting... Goodbye!")
             break
@@ -260,6 +260,15 @@ def sell_product():
         print("Product added:", responseJson)
     else:
         print("Failed to add product:", response.json())
+
+def view_my_products():
+    print("\n--- View my products ---")
+    response = requests.get(f"{API_URL}/myproducts/{user['email']}") 
+    if response.status_code == 200:
+        print(response.json())
+    else:
+        print("Failed to view my products:", response.json())
+
 
 
 def logout():

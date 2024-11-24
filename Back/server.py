@@ -9,6 +9,7 @@ from cassandra.cluster import Cluster
 from pydgraph import DgraphClient, DgraphClientStub
 from Models import mongoModel, cassandraModel, dgraphModel
 
+
 # Database Configuration
 MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
 DB_NAME = os.getenv("MONGODB_DB_NAME", "app")
@@ -104,10 +105,40 @@ def get_profile_details(email: str):
 def add_product(email: str, product: mongoModel.Product):
     try:
         db = app.mongodb_database
-        product = mongoModel.add_product(db, product)
-        if product:
-            mongoModel.add_product_to_seller(db, email, product["_id"])
+        dictio = product.dict()
+        productAdded = mongoModel.add_product(db, dictio)
+        if productAdded:
+            addToSeller=mongoModel.add_product_to_seller(db, email, productAdded["_id"])
+            if(addToSeller):
+                return "Success"
+            else:
+                return "Failed"
         else:
             raise HTTPException(status_code=404, detail="Could not add product")
     except Exception as e:
         raise HTTPException(status_code=500, detail="Internal server error")
+
+@app.get("/myproducts/{email}", status_code=200)
+def my_products(email: str): 
+    try:
+        db = app.mongodb_database
+        user_data = mongoModel.get_mongo_user(db, email)  
+        if not user_data:
+            raise HTTPException(status_code=404, detail="User not found") 
+        
+        userProductsID = user_data.get("products", [])
+        
+        if userProductsID:
+            listOfProducts = []
+            for product_id in userProductsID:
+                product = mongoModel.find_product(db, str(product_id))
+                if product:
+                    listOfProducts.append(product)  
+                else:
+                    listOfProducts.append("Unavailable Product")  
+            return listOfProducts  
+        else:
+            return "User has no products"  
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal server error: " + str(e))
+

@@ -3,6 +3,8 @@ import uuid
 from pydantic import BaseModel, Field
 from pymongo import MongoClient
 from datetime import datetime
+from bson import ObjectId
+
 
 class Product(BaseModel):
     name: str
@@ -56,6 +58,7 @@ def get_mongo_user(mongodb_database, email):
                 "username": user["username"],
                 "address": user["address"], 
                 "created_at": user["created_at"], 
+                "products": user["products"],
             }
         return None
     except Exception as e:
@@ -90,10 +93,11 @@ def add_product_to_seller(mongodb_database, user_email, product_id):
 
         result = mongodb_database.users.update_one(
             {"email": user_email},
-            {"$push": {"products": product_id}}  # Usamos $push para añadir el producto a la lista
+            {"$push": {"products": product_id}}
         )
         if result.modified_count > 0:
             print(f"Product with ID {product_id} added to user {user_email}")
+            return True
         else:
             print("No changes made to the user's product list")
     except Exception as e:
@@ -151,14 +155,18 @@ def edit_product(mongodb_database, user_email, product_id, updated_product_data)
 
 def find_product(mongodb_database, product_id):
     try:
-        product=mongodb_database.products.find_one({"product_id": product_id})
+        if not isinstance(product_id, ObjectId): 
+            product_id = ObjectId(product_id)
+        product = mongodb_database.products.find_one({"_id": product_id})
         return product
     except Exception as e:
-        print(f"Error inserting product into MongoDB: {e}")
+        print(f"Error finding product: {e}")
+        return None
+
 
 def update_product(mongodb_database, product_id, newproduct):
     try:
-        product= mongodb_database.products.update_one({"product_id": product_id,}, 
+        product= mongodb_database.products.update_one({"_id": product_id,}, 
             {"$set": newproduct})
         return product
     except Exception as e:
