@@ -126,16 +126,16 @@ def my_products(email: str):
         if not user_data:
             raise HTTPException(status_code=404, detail="User not found") 
         
-        userProductsID = user_data.get("products", [])
+        userProductsID = user_data["products"]
         
         if userProductsID:
             listOfProducts = []
             for product_id in userProductsID:
-                product = mongoModel.find_product(db, str(product_id))
+                product = mongoModel.find_product(db, product_id)
                 if product:
                     listOfProducts.append(product)  
                 else:
-                    listOfProducts.append("Unavailable Product")  
+                    listOfProducts.append(product)  
             return listOfProducts  
         else:
             return "User has no products"  

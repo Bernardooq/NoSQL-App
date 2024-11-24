@@ -267,7 +267,7 @@ def view_my_products():
     if response.status_code == 200:
         print(response.json())
     else:
-        print("Failed to view my products:", response.json())
+        print("Failed to view my products:", response)
 
 
 

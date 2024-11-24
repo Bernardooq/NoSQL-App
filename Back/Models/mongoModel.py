@@ -58,7 +58,7 @@ def get_mongo_user(mongodb_database, email):
                 "username": user["username"],
                 "address": user["address"], 
                 "created_at": user["created_at"], 
-                "products": user["products"],
+                "products": [str(product_id) for product_id in user["products"]]
             }
         return None
     except Exception as e:
@@ -140,8 +140,8 @@ def edit_product(mongodb_database, user_email, product_id, updated_product_data)
             return None
 
         result = mongodb_database.products.update_one(
-            {"_id": product_id},  # Usamos ObjectId para la búsqueda
-            {"$set": updated_product_data}  # Usamos $set para actualizar los campos
+            {"_id": product_id},  
+            {"$set": updated_product_data}  
         )
 
         if result.modified_count > 0:
@@ -158,7 +158,14 @@ def find_product(mongodb_database, product_id):
         if not isinstance(product_id, ObjectId): 
             product_id = ObjectId(product_id)
         product = mongodb_database.products.find_one({"_id": product_id})
-        return product
+        return {
+            "product_id": str(product["_id"]),
+            "name": product["name"],
+            "description": product["description"],
+            "price": product["price"],
+            "image": product["image"]
+
+        }
     except Exception as e:
         print(f"Error finding product: {e}")
         return None
@@ -182,12 +189,6 @@ def search_products(mongodb_database, query):
         print(f"Error searching products in MongoDB: {e}")
         raise
 
-def find_product(mongodb_database, product_id):
-    try:
-        product= mongodb_database.products.find_one({"product_id": product_id})
-        return(product)
-    except Exception as e:
-        print(f"Error finding product in MongoDB: {e}")
 
 from pymongo.errors import PyMongoError
 
