@@ -1,0 +1,4 @@
+docker run --name appCassandra -d -p 9042:9042 cassandra
+docker exec -it appCassandra cqlsh
+CREATE KEYSPACE app WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor' : 1 };
+use app

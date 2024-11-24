@@ -56,9 +56,6 @@ def shutdown_db_client():
 
 
 # Register User Endpoint
-from fastapi import HTTPException
-from Models import mongoModel
-
 @app.post("/register", status_code=201)
 def register_user(user: mongoModel.User):
     db = app.mongodb_database

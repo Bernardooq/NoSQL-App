@@ -1,0 +1,3 @@
+docker run -it --name appDgraph -p 8080:8080 -p 9080:9080 dgraph/standalone:latest
+docker run -it --name appRatel -p 8000:8000 dgraph/ratel
+
