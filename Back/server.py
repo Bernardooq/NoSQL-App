@@ -59,10 +59,55 @@ def shutdown_db_client():
 @app.post("/register", status_code=201)
 def register_user(user: mongoModel.User):
     db = app.mongodb_database
-    if mongoModel.find_user(db, user.email):
+    if mongoModel.get_mongo_user(db, user.email):
         raise HTTPException(status_code=400, detail="Email already registered")
     
     user_data = user.dict()  
     mongoModel.add_mongo_user(db, user_data)
     
-    return {"message": "User registered successfully", "user": user.email}
+    return {"message": "User registered successfully", "email": user.email, "username": user.username}
+
+@app.post("/login", status_code=200)
+def login_user(user: mongoModel.UserLogin):
+    db = app.mongodb_database
+    user_data = user.dict()
+    mongoresponse=mongoModel.verify_mongo_user(db, user_data["email"], user_data["password"])
+    if mongoresponse:
+        return {"message": "User login successfully", "email": mongoresponse["email"], "username": mongoresponse["username"]}
+    else:
+        raise HTTPException(status_code=400, detail="Email or password incorrect")
+
+@app.put("/users/{email}", status_code=200)
+def update_user_profile(email: str, updates: dict):
+    try:
+        db = app.mongodb_database
+        updated = mongoModel.update_mongo_user(db, email, updates)
+        if updated:
+            return {"message": "User profile updated successfully"}
+        else:
+            raise HTTPException(status_code=404, detail="User not found or no changes made")
+    except Exception as e:
+        print(f"Error in update_user_profile: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+    
+@app.get("/profiledetails/{email}", status_code=200)
+def get_profile_details(email: str):
+    db = app.mongodb_database
+    profile = mongoModel.get_mongo_user(db, email)
+    if profile:
+        return profile
+    else:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    
+@app.post("/addproduct/{email}", status_code=200)
+def add_product(email: str, product: mongoModel.Product):
+    try:
+        db = app.mongodb_database
+        product = mongoModel.add_product(db, product)
+        if product:
+            mongoModel.add_product_to_seller(db, email, product["_id"])
+        else:
+            raise HTTPException(status_code=404, detail="Could not add product")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal server error")

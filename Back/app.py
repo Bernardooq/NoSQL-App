@@ -1,11 +1,13 @@
 import requests
 
 API_URL = "http://127.0.0.1:8000" 
+global user
+user = {}
 
 def main_menu():
     while True:
         print("\n--- Welcome to the Store App ---")
-        print("1. Search history")
+        print("1. See profile")
         print("2. Update Profile")
         print("3. Product Catalog")
         print("4. Create Purchase Order")
@@ -23,7 +25,7 @@ def main_menu():
         choice = input("Select an option: ")
 
         if choice == "1":
-            search_history()
+            see_profile()
         elif choice == "2":
             update_profile()
         elif choice == "3":
@@ -45,7 +47,7 @@ def main_menu():
         elif choice == "11":
             track_orders()
         elif choice == "12":
-            admin_dashboard()
+            sell_product()
         elif choice == "13":
             logout()
         elif choice == "0":
@@ -54,26 +56,19 @@ def main_menu():
         else:
             print("Invalid choice. Please try again.")
 
-def search_history(var = 0):
-    print(f"Searching history page {var+1}...")
-    myvar = var
-    response= requests.get(f"{API_URL}/history/{range}")
+def see_profile():
+    print("\n--- See Profile ---")
+    response = requests.get(f"{API_URL}/profiledetails/{user['email']}")  # Usa el email del usuario autenticado
     if response.status_code == 200:
-        history = response.json()
-        for i in range(myvar): 
-            print(history[i])
-    print("Next page (type 1) \nPrevious page (type 2)\n Exit (type enter)")
-    page= int(input("Option: "))
-    if page == 1:
-        myvar+=10
-        search_history(myvar)
-    elif page == 2:
-        if myvar!=0: 
-            myvar-10 
-            search_history(myvar)
-        else: 
-            print("You are at page 1")
-            search_history(myvar)
+        profile = response.json()
+        print("Profile Details:")
+        print(f"Id: {profile['_id']}")
+        print(f"Email: {profile['email']}")
+        print(f"Username: {profile['username']}")
+        print(f"Address: {profile['address']}")  
+        print(f"Registration Date: {profile['created_at']}")
+    else:
+        print("Failed to fetch profile details:", response.json())
 
 def user_registration():
     print("\n--- User Registration ---")
@@ -94,10 +89,11 @@ def user_registration():
 
     if response.status_code == 201:
         print("Registration successful!")
+        user["email"]=response_data["email"]
         return response_data
     else:
         print("Registration failed:", response_data)
-        return ''
+        return False
 
     
 def user_login():
@@ -107,24 +103,31 @@ def user_login():
     response = requests.post(f"{API_URL}/login", json = {"email": email, "password": password})
 
     if response.status_code == 200:
+        response_data= response.json()
+        user["email"]=response_data["email"]
         print("Login successful")
         return response.json()
     else:
-        print("Login failed: ", response.json())
-        return ''
+        print("Login failed:", response)
+        return False
 
 
 def update_profile():
     print("\n--- Update Profile ---")
-    user_id = input("User ID: ")
-    new_email = input("New Email (leave blank to keep current): ")
+    new_username = input("New username: ")
     new_password = input("New Password (leave blank to keep current): ")
+    address = input("New address: ")
 
-    payload = {}
-    if new_email: payload["email"] = new_email
-    if new_password: payload["password"] = new_password
+    user_update = {}
+    user_update = {}
+    if new_username:
+        user_update["username"] = new_username
+    if new_password:
+        user_update["password"] = new_password
+    if address:
+        user_update["address"] = address
 
-    response = requests.put(f"{API_URL}/users/{user_id}", json=payload)
+    response = requests.put(f"{API_URL}/users/{user['email']}", json=user_update)
     if response.status_code == 200:
         print("Profile updated successfully!")
     else:
@@ -243,33 +246,53 @@ def track_orders():
     else:
         print("Failed to track order:", response.json())
 
-def admin_dashboard():
-    print("\n--- Admin Dashboard ---")
-    print("Coming soon!")
+def sell_product():
+    print("\n--- Product sell ---")
+    name= input("Product name: ")
+    desc= input("Product description: ")
+    price =float(input("Product price: "))
+    catego = input("Product category: ")
+    stock= int(input("Product stock: "))
+    image= input("Product image url: ")
+    response = requests.post(f"{API_URL}/addproduct/{user['email']}", json={"name":name, "description":desc, "price":price, "category":catego, "image":image})
+    if response.status_code == 200:
+        responseJson=response.json()
+        print("Product added:", responseJson)
+    else:
+        print("Failed to add product:", response.json())
+
 
 def logout():
     print("You have been logged out.")
 
+
 def menu():
     menu1flag = True
     menu2flag = False
-    data= ''
     while(menu1flag):
         print("\n--- Menu ---")
-        (print("1. Login\n2. Create account"))
+        (print("1. Login\n2. Create account\n3. Exit"))
         option= int(input("Select an option: "))
         if option ==1:
-            data= user_login()  
-            if data != '': 
+            userlog=user_login()
+            if userlog: 
+                print(userlog)
                 menu2flag = True
                 menu1flag = False
         elif option == 2:
-            data = user_registration()
-            if data != '': 
+            userlog=user_registration()
+            if userlog: 
+                print(userlog)
                 menu2flag = True
                 menu1flag = False
+
+        elif option == 3:
+            exit(0)
+        else:
+            print("Error: Unknown option")
     while (menu2flag):
         main_menu()
 
 if __name__ == "__main__":
     menu()
+

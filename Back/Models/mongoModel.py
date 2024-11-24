@@ -1,14 +1,27 @@
+import random
 import uuid
 from pydantic import BaseModel, Field
 from pymongo import MongoClient
 from datetime import datetime
 
+class Product(BaseModel):
+    name: str
+    description: str
+    price: float
+    category: str
+    image: str
+
 class User(BaseModel):
-    username: str
+    username: str 
     email: str
     password: str
     created_at: datetime = datetime.now()
+    address: str = None
+    products: list = []
 
+class UserLogin(BaseModel):
+    email: str
+    password: str
 
 # Mongo connection
 def init_mongo(mongo_uri, db_name):
@@ -24,10 +37,10 @@ def add_mongo_user(mongodb_database, user_data):
         print(f"Error inserting user into MongoDB: {e}")
         raise
 
-def find_user(mongodb_database, email):
+def verify_mongo_user(mongodb_database, email, password):
     try:
-        data= mongodb_database.users.find_one({"email": email})
-        return data
+        response= mongodb_database.users.find_one({"email": email, "password": password})
+        return response
     except Exception as e:
         print(f"Error user not found: {e}")
         raise
@@ -36,11 +49,29 @@ def find_user(mongodb_database, email):
 def get_mongo_user(mongodb_database, email):
     try:
         user = mongodb_database.users.find_one({"email": email})
-        return user
+        if user:
+            return {
+                "_id": str(user["_id"]),
+                "email": user["email"],
+                "username": user["username"],
+                "address": user["address"], 
+                "created_at": user["created_at"], 
+            }
+        return None
     except Exception as e:
-        print(f"Error getting user from MongoDB: {e}")
-        raise 
+        print(f"Error fetching user profile: {e}")
+        raise
 
+def update_mongo_user(mongodb_database, email, new_user):
+    try:
+        result = mongodb_database.users.update_one(
+            {"email": email}, 
+            {"$set": new_user} 
+        )
+        return result.modified_count > 0  
+    except Exception as e:
+        print(f"Error updating user: {e}")
+        raise
 # Product catalog
 def add_product(mongodb_database, product):
     try:
@@ -49,6 +80,74 @@ def add_product(mongodb_database, product):
     except Exception as e:
         print(f"Error inserting product into MongoDB: {e}")
         raise
+
+def add_product_to_seller(mongodb_database, user_email, product_id):
+    try:
+        user = mongodb_database.users.find_one({"email": user_email})
+        if not user:
+            print("User not found")
+            return None
+
+        result = mongodb_database.users.update_one(
+            {"email": user_email},
+            {"$push": {"products": product_id}}  # Usamos $push para añadir el producto a la lista
+        )
+        if result.modified_count > 0:
+            print(f"Product with ID {product_id} added to user {user_email}")
+        else:
+            print("No changes made to the user's product list")
+    except Exception as e:
+        print(f"Error adding product to seller: {e}")
+        raise
+
+
+def remove_product_from_seller(mongodb_database, user_email, product_id):
+    try:
+        user = mongodb_database.users.find_one({"email": user_email})
+        if not user:
+            print("User not found")
+            return None
+        result = mongodb_database.users.update_one(
+            {"email": user_email},
+            {"$pull": {"products": product_id}}  
+        )
+        if result.modified_count > 0:
+            print(f"Product with ID {product_id} removed from user {user_email}")
+        else:
+            print("No changes made to the user's product list")
+    except Exception as e:
+        print(f"Error removing product from seller: {e}")
+        raise
+
+def edit_product(mongodb_database, user_email, product_id, updated_product_data):
+    try:
+        user = mongodb_database.users.find_one({"email": user_email})
+        if not user:
+            print("User not found")
+            return None
+        
+        if product_id not in [str(p) for p in user.get('products', [])]:  # Convertimos los ids a string
+            print(f"Product with ID {product_id} does not belong to user {user_email}")
+            return None
+        
+        product = mongodb_database.products.find_one({"_id": product_id})
+        if not product:
+            print(f"Product with ID {product_id} not found in products collection")
+            return None
+
+        result = mongodb_database.products.update_one(
+            {"_id": product_id},  # Usamos ObjectId para la búsqueda
+            {"$set": updated_product_data}  # Usamos $set para actualizar los campos
+        )
+
+        if result.modified_count > 0:
+            print(f"Product with ID {product_id} updated successfully")
+        else:
+            print("No changes made to the product")
+    except Exception as e:
+        print(f"Error editing product: {e}")
+        raise
+
 
 def find_product(mongodb_database, product_id):
     try:
