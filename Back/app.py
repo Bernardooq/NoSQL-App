@@ -153,9 +153,6 @@ def update_profile():
     else:
         print("Failed to update profile:", response.json())
 
-import requests
-
-API_URL = "http://localhost:8000"  # Cambia la URL según corresponda
 
 def view_product_catalog():
     current_page = 1

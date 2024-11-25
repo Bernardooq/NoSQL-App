@@ -48,6 +48,7 @@ def add_mongo_user(mongodb_database, user_data):
         print(f"Error inserting user into MongoDB: {e}")
         raise
 
+# User Login
 def verify_mongo_user(mongodb_database, email, password):
     try:
         response= mongodb_database.users.find_one({"email": email, "password": password})
@@ -74,6 +75,7 @@ def get_mongo_user(mongodb_database, email):
         print(f"Error fetching user profile: {e}")
         raise
 
+# Update User
 def update_mongo_user(mongodb_database, email, new_user):
     try:
         result = mongodb_database.users.update_one(
@@ -84,7 +86,8 @@ def update_mongo_user(mongodb_database, email, new_user):
     except Exception as e:
         print(f"Error updating user: {e}")
         raise
-# Product catalog
+
+# Add product
 def add_product(mongodb_database, product):
     try:
         mongodb_database.products.insert_one(product)
@@ -93,6 +96,7 @@ def add_product(mongodb_database, product):
         print(f"Error inserting product into MongoDB: {e}")
         raise
 
+# Add product to a seller 
 def add_product_to_seller(mongodb_database, user_email, product_id):
     try:
         user = mongodb_database.users.find_one({"email": user_email})
@@ -113,7 +117,7 @@ def add_product_to_seller(mongodb_database, user_email, product_id):
         print(f"Error adding product to seller: {e}")
         raise
 
-
+# Remove products from the list of products that a seller has 
 def remove_product_from_seller(mongodb_database, product_id, user_email):
     try:
         user_email = str(user_email)
@@ -130,7 +134,7 @@ def remove_product_from_seller(mongodb_database, product_id, user_email):
         print(f"Error removing product from seller: {e}")
         return False
 
-
+# Remove products from the list of products that a seller has
 def remove_product(mongodb_database, product_id):
     try:
         result = mongodb_database.products.delete_one({"_id": ObjectId(product_id)})
@@ -139,6 +143,7 @@ def remove_product(mongodb_database, product_id):
         print(f"Error deleting product: {e}")
         return False
 
+# Update product
 def update_product(mongodb_database, product_id, productUpdate):
     product=find_product(mongodb_database, product_id)
     if product:
@@ -154,7 +159,7 @@ def update_product(mongodb_database, product_id, productUpdate):
     else:
         return {"message": "Product not found"}
 
-
+# Find product 
 def find_product(mongodb_database, product_id):
     if not isinstance(product_id, ObjectId): 
         product_id = ObjectId(product_id)   
@@ -170,7 +175,7 @@ def find_product(mongodb_database, product_id):
     else:
         return None
 
-
+# Show products in the feed
 def show_product_list(mongodb_database, skip=None, pagesize=None):
         if(skip is not None and pagesize is not None):
             products_cursor = (
@@ -196,6 +201,7 @@ def show_product_list(mongodb_database, skip=None, pagesize=None):
             return products
 
 
+# Search product by kewwords
 def search_products(mongodb_database, query):
     try:
         search_regex = {"$regex": query, "$options": "i"} 
@@ -219,7 +225,7 @@ def search_products(mongodb_database, query):
         return []
    
 
-
+# Remove products from cart list
 def remove_from_cart(mongodb_database, email, product_id):
     try:
         if not isinstance(product_id, ObjectId):
@@ -237,7 +243,7 @@ def remove_from_cart(mongodb_database, email, product_id):
         print(f"Error removing from cart: {e}")
         return False
 
-    
+# Edit cart
 def edit_cart(mongodb_database, email, product_id, new_quantity):
     try:
         if not isinstance(product_id, ObjectId):
@@ -258,7 +264,7 @@ def edit_cart(mongodb_database, email, product_id, new_quantity):
         print(f"Error editing cart: {e}")
         return False
 
-
+# View cart list for product
 def view_cart(mongodb_database, email):
     try:
         cart = mongodb_database.carts.find_one({"email": email})
@@ -284,6 +290,7 @@ def view_cart(mongodb_database, email):
         return {"items": []} 
 
 
+# Add products to cart
 def add_to_cart(mongodb_database, email, product_id, quantity=1):
     try:
         if not isinstance(product_id, ObjectId):
@@ -377,7 +384,7 @@ def get_user_wishlist(mongodb_database, email):
         print(f"Error viewing wishlist: {e}")
         return {"items": []}  
 
-
+# Delete wishlist product
 def delete_from_wishlist(mongodb_database, email, product_id):
     try:
         if not isinstance(product_id, ObjectId):
@@ -401,27 +408,9 @@ def delete_from_wishlist(mongodb_database, email, product_id):
         print(f"Error deleting from wishlist: {e}")
         return False
 
-# Update user info
-def update_user_info(mongodb_database, email, updated_info):
-    """
-    Actualiza la información de un usuario basado en su correo electrónico.
-    """
-    try:
-        result = mongodb_database.users.update_one(
-            {"email": email},
-            {"$set": updated_info}
-        )
-        if result.matched_count == 0:
-            print(f"No user found with email: {email}")
-    except Exception as e:
-        print(f"Error updating user info in MongoDB: {e}")
-        raise
 
 # Add return request
 def add_return_request(mongodb_database, order_id, product_id, reason):
-    """
-    Crea una solicitud de devolución para un producto específico en un pedido.
-    """
     try:
         return_request = {
             "order_id": order_id,
