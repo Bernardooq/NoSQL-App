@@ -1,5 +1,5 @@
-product_id,name,price,recommended_forus,related_product
-1,uno,10,2,3
-2,dos,10,2,2
-3,tres,10,2,2
-4,cuatro,10,2,3
+product_id,name,price,recommended_forus,related_product,review,rating
+1,uno,10,2,3,1,4
+2,dos,10,2,2,2,4
+3,tres,10,2,2,3,4
+4,cuatro,10,2,3,4,5

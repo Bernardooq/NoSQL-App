@@ -17,6 +17,8 @@ def set_schema(client):
             product_id
             recommended_for
             related_products
+            reviews
+            rating
         }
 
         type Suggestions {
@@ -36,6 +38,8 @@ def set_schema(client):
         product_id: string @index(exact) .
         recommended_for: [uid] @reverse . # Edge to User with facet {score}
         related_products: [uid] @reverse . # Edge to Product
+        reviews: [uid] . # Edge to Product
+        rating: int . # Edge to Product
 
         suggestions: [uid] @reverse . # Edge to Product with facet {score}
 
@@ -108,10 +112,11 @@ def search_person(client, name):
     variables = {'$a': name}
     res = client.txn(read_only=True).query(query, variables=variables)
     ppl = json.loads(res.json)
-
+    unique_users = {}
+    for User in ppl['all']:
+        unique_users[User['user_id']] = User
     # Print results.
-    print(f"Number of people named {name}: {len(ppl['all'])}")
-    print(f"Data associated with {name}:\n{json.dumps(ppl, indent=2)}")
+    print(f"Data associated with {name}:\n{json.dumps(unique_users, indent=2)}")
 
 
 def drop_all(client):
@@ -137,9 +142,10 @@ def load_products(file_path):
                     'name': row['name'],
                     'price': row['price'],
                     'recommended_forus': row['recommended_forus'],
-                    'related_product': row['related_product']
+                    'related_product': row['related_product'],
+                    'review':row['review'],
+                    'rating':row['rating']
                 })
-            print(f"Loading products: {products}")
             resp = txn.mutate(set_obj=products)
         txn.commit()
     finally:
@@ -158,7 +164,6 @@ def load_suppliers(file_path):
                     'uid': '_:' + row['user_id'],
                     'feedback': row['feedback']
                 })
-            print(f"Loading suppliers: {suppliers}")
             resp = txn.mutate(set_obj=suppliers)
         txn.commit()
     finally:
@@ -177,7 +182,26 @@ def load_users(file_path):
                     'uid': '_:' + row['user_id'],
                     'user_id':row['user_id'],
                 })
-            print(f"Loading users: {products}")
+            resp = txn.mutate(set_obj=products)
+        txn.commit()
+    finally:
+        txn.discard()
+    return resp.uids
+
+def load_feedback(file_path):
+    txn = client.txn()
+    resp = None
+    try:
+        products = []
+        with open(file_path, 'r') as file:
+            reader = csv.DictReader(file)
+            for row in reader:
+                products.append({
+                    'uid': '_:' + row['feedback_id'],
+                    'feedback_id':row['feedback_id'],
+                    'feedback': row['feedback'],
+                    'product_id':row['product_id']
+                })
             resp = txn.mutate(set_obj=products)
         txn.commit()
     finally:
@@ -199,11 +223,31 @@ def create_edges_related(file_path, product_uids, supplier_uids): #related
                         'uid': product_uids[product]
                     }
                 }
-                print(f"Generating relationship {supplier} -related-> {product}")
                 txn.mutate(set_obj=mutation)
         txn.commit()
     finally:
         txn.discard()
+
+
+def create_edges_feedback(file_path, product_uids, feedback_uids): #related
+    txn = client.txn()
+    try:
+        with open(file_path, 'r') as file:
+            reader = csv.DictReader(file)
+            for row in reader:
+                product= row['product_id']
+                feed = row['feedback_id']
+                mutation = {
+                    'uid': product_uids[product],
+                    'reviews': {
+                        'uid': feedback_uids[feed]
+                    }
+                }
+                txn.mutate(set_obj=mutation)
+        txn.commit()
+    finally:
+        txn.discard()
+
 
 def create_edges_recommended(file_path, product_uids, supplier_uids): #recommended
     txn = client.txn()
@@ -219,7 +263,6 @@ def create_edges_recommended(file_path, product_uids, supplier_uids): #recommend
                         'uid': product_uids[product]
                     }
                 }
-                print(f"Generating relationship {supplier} -recommended to-> {product}")
                 txn.mutate(set_obj=mutation)
         txn.commit()
     finally:
@@ -239,7 +282,6 @@ def create_edges_reviewed(file_path, product_uids, user_uids): #reviewed
                         'uid': product_uids[product]
                     }
                 }
-                print(f"Generating relationship {users} -reviewed-> {product}")
                 txn.mutate(set_obj=mutation)
         txn.commit()
     finally:
@@ -256,17 +298,20 @@ def product_query(client, name):
             related_products {
                 product_id
             }
-            
+            review{
+                feedback           
+            }
+            rating
         }
     }"""
 
     variables = {'$a': name}
     res = client.txn(read_only=True).query(query, variables=variables)
     ppl = json.loads(res.json)
+    unique_products = {}
+    unique_products = {product['product_id']: product for product in ppl['all']}
 
-    # Print results.
-    print(f"Number of people named {name}: {len(ppl['all'])}")
-    print(f"Data associated with {name}:\n{json.dumps(ppl, indent=2)}")
+    print(f"Data associated with {name}:\n{json.dumps(unique_products, indent=2)}")
 
 
 
@@ -276,8 +321,10 @@ set_schema(client)
 # Load products and suppliers
 product_uids = load_products('./Models/products.csv')
 user_uids=load_users('./Models/users.csv')
-#supplier_uids = load_suppliers('suppliers.csv')
+feedback_uids=load_feedback('./Models/feedback.csv')
 # Create relationships
 create_edges_related('./Models/products.csv', product_uids, product_uids)
 create_edges_reviewed('./Models/reviews.csv', product_uids, user_uids)
+create_edges_recommended('./Models/products.csv', product_uids, product_uids)
+create_edges_feedback('./Models/feedback.csv',product_uids, feedback_uids)
 # Call your query functions here

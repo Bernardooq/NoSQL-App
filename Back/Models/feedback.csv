@@ -1,3 +1,4 @@
-user_id,feedback
-1,no me gusto
-2,like
+feedback_id,feedback,product_id
+1,no me gusto,1
+2,like,2
+3,masomenos,3
