@@ -189,3 +189,13 @@ def get_products(page: int , page_size: int ):
         return products
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
+    
+@app.get("/search", status_code=200)
+def search_products(q: str):
+    db= app.mongodb_database
+    try:
+        # Realizar la búsqueda en la base de datos usando mongoModel
+        products = mongoModel.search_products(db, q)
+        return products
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")

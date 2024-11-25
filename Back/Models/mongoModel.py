@@ -187,10 +187,25 @@ def show_product_list(mongodb_database, skip=None, pagesize=None):
 
 
 def search_products(mongodb_database, query):
-    products = mongodb_database.products.find({
-        "$text": {"$search": query}
-    })
-    return list(products)
+    try:
+        search_regex = {"$regex": query, "$options": "i"} 
+        products_cursor = mongodb_database.products.find(
+            {"$or": [{"name": search_regex}, {"description": search_regex}]}
+        )
+
+        products = [
+            {
+                "name": product["name"],
+                "description": product["description"],
+                "price": product["price"],
+                "image": product["image"],
+            }
+            for product in products_cursor
+        ]
+        return products
+    except Exception as e:
+        print(f"Error searching for products: {e}")
+        return []
    
 
 

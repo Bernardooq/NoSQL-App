@@ -254,7 +254,7 @@ def search_products():
     if response.status_code == 200:
         products = response.json()
         for product in products:
-            print(f"{product['name']} - ${product['price']} (Stock: {product['stock']})")
+            print(f"{product['name']} - ${product['price']} ----- Description: {product['description']} -----")
     else:
         print("Search failed:", response.json())
 
