@@ -267,9 +267,26 @@ def get_search_history_by_product(session, user_id, product_id):
 #PRODUCT ANALYTICS
 #Q1. Query product analytics for a specific product.
 def get_product_analytics(session, product_id):
-    stmt = session.prepare("SELECT * FROM product_analytics WHERE product_id = ?")
-    rows = session.execute(stmt, [product_id])
-    return rows
+    try:
+        stmt = session.prepare("SELECT * FROM product_analytics WHERE product_id = ?")
+        rows = session.execute(stmt, [product_id])
+
+        if not rows:
+            print(f"No analytics found for product ID: {product_id}")
+            return
+
+        # Print a header
+        print(f"\n--- Product Analytics for Product ID: {product_id} ---")
+
+        for row in rows:
+            print(f"Product ID      : {row.product_id}")
+            print(f"Views           : {row.views}")
+            print(f"Purchases       : {row.purchases}")
+            print(f"Ratings Average : {row.avg_rating:.2f}")
+            print(f"Last Updated    : {row.last_updated}")
+            print("-" * 40)
+    except Exception as e:
+        print(f"An error occurred while fetching product analytics: {e}")
 
 #Q2. Query total revenue for all products
 def get_total_revenue_for_all_products(session):
@@ -280,10 +297,23 @@ def get_total_revenue_for_all_products(session):
 #INVENTORY
 #Q1. Query stock levels for a product.
 def get_stock_level_by_product(session, product_id):
-    stmt = session.prepare("SELECT stock_level, last_updated FROM inventory WHERE product_id = ?")
-    rows = session.execute(stmt, [product_id])
-    return rows
+    try:
+        stmt = session.prepare("SELECT stock_level, last_updated FROM inventory WHERE product_id = ?")
+        rows = session.execute(stmt, [product_id])
 
+        if not rows:
+            print(f"No stock information found for product ID: {product_id}")
+            return
+
+        # Print a header
+        print("\n--- Stock Level Details ---")
+        for row in rows:
+            print(f"Product ID     : {product_id}")
+            print(f"Stock Level    : {row.stock_level}")
+            print(f"Last Updated   : {row.last_updated}")
+            print("-" * 30)
+    except Exception as e:
+        print(f"An error occurred while fetching stock levels: {e}")
 #Q2. Query products with stock below a threshold.
 def get_products_with_low_stock(session, threshold):
     stmt = session.prepare("SELECT product_id, stock_level FROM inventory WHERE stock_level < ?")
@@ -293,9 +323,25 @@ def get_products_with_low_stock(session, threshold):
 #PROMOTIONS
 #Q1. Query details of a promo code.
 def get_promotion_details(session, promo_code):
-    stmt = session.prepare("SELECT * FROM promotions WHERE promo_code = ?")
-    rows = session.execute(stmt, [promo_code])
-    return rows
+    try:
+        stmt = session.prepare("SELECT * FROM promotions WHERE promo_code = ?")
+        rows = session.execute(stmt, [promo_code])
+        
+        if not rows:
+            print(f"No details found for promo code: {promo_code}")
+            return
+
+        # Print a header
+        print("\n--- Promotion Details ---")
+        for row in rows:
+            print(f"Promo Code       : {row.promo_code}")
+            print(f"Discount         : {row.discount_percentage}%")
+            print(f"Product ID       : {row.product_id}")
+            print(f"Start Date       : {row.start_date}")
+            print(f"End Date         : {row.end_date or 'No end date specified'}")
+            print("-" * 30)
+    except Exception as e:
+        print(f"An error occurred while fetching promo details: {e}")
 
 #Q2. Query active promotions for a product within a date range.
 def get_active_promotions(session, product_id, start_date, end_date):
@@ -338,6 +384,15 @@ def get_abandoned_carts_by_timeframe(session, start_date, end_date):
 import random
 import datetime
 from cassandra.query import BatchStatement
+def insert_search_history(session, user_id, search_query, product_id):
+    search_stmt = session.prepare("""
+        INSERT INTO search_history (user_id, search_query, time, product_id)
+        VALUES (?, ?, ?, ?)
+    """)
+    batch = BatchStatement()
+    time = datetime.datetime.now()
+    batch.add(search_stmt, (user_id, search_query, time, product_id))
+    session.execute(batch)
 
 def insert_purchase_order(session, user_id, order_id, product_id, quantity, total_price, payment_method):
     po_stmt = session.prepare("""
