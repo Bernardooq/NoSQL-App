@@ -92,9 +92,9 @@ def main_menu():
             view_my_products()
         elif choice == "5.3":
             seller_statics()
-        elif choice == "5.3":
-            update_product()
         elif choice == "5.4":
+            update_product()
+        elif choice == "5.5":
             delete_product()
 
         # Reviews and Ratings

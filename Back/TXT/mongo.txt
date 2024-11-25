@@ -8,3 +8,6 @@ db.createCollection("carts")
 db.createCollection("wishlist")
 db.createCollection("returns")
 db.createCollection("points")
+
+
+python -m uvicorn server:app --reload
