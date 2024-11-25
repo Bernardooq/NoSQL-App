@@ -162,6 +162,29 @@ def find_product(mongodb_database, product_id):
         return None
 
 
+def show_product_list(mongodb_database, skip=None, pagesize=None):
+        if(skip is not None and pagesize is not None):
+            products_cursor = (
+                mongodb_database.products.find()
+                .skip(skip)
+                .limit(pagesize)
+            )
+            products = [
+                {
+                    "product_id": str(product["_id"]),
+                    "name": product["name"],
+                    "description": product["description"],
+                    "price": product["price"],
+                    "image": product["image"],
+                }
+                for product in products_cursor
+            ]
+
+            return products
+        else:
+            products= mongodb_database.products.find()
+            return products
+
 
 def search_products(mongodb_database, query):
     products = mongodb_database.products.find({

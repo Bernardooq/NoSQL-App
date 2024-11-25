@@ -175,3 +175,17 @@ def deleteProduct(pid: str, email: str):
     except Exception as e:
         print(f"Error in deleteProduct: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+@app.get("/products")
+def get_products(page: int , page_size: int ):
+    try:
+        db = app.mongodb_database  
+        skip = (page - 1) * page_size
+
+        products = mongoModel.show_product_list(db, skip, page_size)
+        if not products:
+            raise HTTPException(status_code=404, detail="No products found for this page.")
+
+        return products
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {e}")

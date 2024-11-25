@@ -138,15 +138,43 @@ def update_profile():
     else:
         print("Failed to update profile:", response.json())
 
+import requests
+
+API_URL = "http://localhost:8000"  # Cambia la URL según corresponda
+
 def view_product_catalog():
-    print("\n--- Product Catalog ---")
-    response = requests.get(f"{API_URL}/products")
-    if response.status_code == 200:
-        products = response.json()
-        for product in products:
-            print(f"{product['name']} - ${product['price']} (Stock: {product['stock']})")
-    else:
-        print("Failed to load product catalog:", response.json())
+    current_page = 1
+    page_size = 10
+    while True:
+        print(f"\n--- Product Catalog (Page {current_page}) ---")
+        response = requests.get(f"{API_URL}/products", params={"page": current_page, "page_size": page_size})
+        if response.status_code == 200:
+            products = response.json()
+            if not products:
+                print("No products available.")
+                break
+            for product in products:
+                print(f"{product['name']} - ${product['price']} --- Description: {product['description']}")
+
+            print("\nOptions:")
+            print("1. Next Page")
+            print("2. Previous Page")
+            print("3. Exit")
+            choice = input("Enter your choice: ")
+
+            if choice == "1": 
+                current_page += 1
+            elif choice == "2" and current_page > 1: 
+                current_page -= 1
+            elif choice == "3":  
+                print("Exiting the catalog.")
+                break
+            else:
+                print("Invalid choice. Please try again.")
+        else:
+            print("Failed to load product catalog:", response.json())
+            break
+
 
 def create_purchase_order():
     print("\n--- Create Purchase Order ---")
