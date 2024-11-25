@@ -7,58 +7,73 @@ user = {}
 def main_menu():
     while True:
         print("\n--- Welcome to the Store App ---")
-        print("1. See profile")
-        print("2. Update Profile")
-        print("3. Product Catalog")
-        print("4. Create Purchase Order")
-        print("5. View Purchase History")
-        print("6. Shopping Cart")
-        print("7. User Account")
-        print("8. Reviews and Ratings")
-        print("9. Search Products")
-        print("10. Wishlist")
-        print("11. Order Tracking")
-        print("12. Sell New Products")
-        print("13. My Products")
-        print("14. Update product")
-        print("15. Delete My Products")
+        print("1. Profile Management")
+        print("   1.1. See Profile")
+        print("   1.2. Update Profile")
+        print("2. Product Catalog")
+        print("   2.1. Browse Products")
+        print("   2.2. Search Products")
+        print("   2.3. Wishlist")
+        print("3. Orders and Purchases")
+        print("   3.1. Create Purchase Order")
+        print("   3.2. View Purchase History")
+        print("   3.3. Order Tracking")
+        print("4. Shopping Cart")
+        print("5. Product Management")
+        print("   5.1. Sell New Products")
+        print("   5.2. My Products")
+        print("   5.3. Update Product")
+        print("   5.4. Delete Product")
+        print("6. Reviews and Ratings")
         print("0. Exit")
         
         choice = input("Select an option: ")
 
-        if choice == "1":
+        # Profile Management
+        if choice == "1.1":
             see_profile()
-        elif choice == "2":
+        elif choice == "1.2":
             update_profile()
-        elif choice == "3":
+
+        # Product Catalog
+        elif choice == "2.1":
             view_product_catalog()
-        elif choice == "4":
-            create_purchase_order()
-        elif choice == "5":
-            view_purchase_history()
-        elif choice == "6":
-            manage_shopping_cart()
-        elif choice == "7":
-            manage_user_account()
-        elif choice == "8":
-            leave_reviews_and_ratings()
-        elif choice == "9":
+        elif choice == "2.2":
             search_products()
-        elif choice == "10":
+        elif choice == "2.3":
             manage_wishlist()
-        elif choice == "11":
+
+        # Orders and Purchases
+        elif choice == "3.1":
+            create_purchase_order()
+        elif choice == "3.2":
+            view_purchase_history()
+        elif choice == "3.3":
             track_orders()
-        elif choice == "12":
+
+        # Shopping Cart
+        elif choice == "4":
+            manage_shopping_cart()
+
+        # Product Management
+        elif choice == "5.1":
             sell_product()
-        elif choice == "13":
+        elif choice == "5.2":
             view_my_products()
-        elif choice == "14":
+        elif choice == "5.3":
             update_product()
-        elif choice == "15":
+        elif choice == "5.4":
             delete_product()
+
+        # Reviews and Ratings
+        elif choice == "6":
+            leave_reviews_and_ratings()
+
+        # Exit
         elif choice == "0":
             print("Exiting... Goodbye!")
             break
+
         else:
             print("Invalid choice. Please try again.")
 
