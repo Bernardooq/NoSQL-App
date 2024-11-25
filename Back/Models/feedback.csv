@@ -1,4 +1,4 @@
-feedback_id,feedback,product_id
-1,no me gusto,1
-2,like,2
-3,masomenos,3
+product_id,feedback_id,feedback
+1,1,Great product!
+1,2,Not bad, could improve.
+2,3,Excellent quality!

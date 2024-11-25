@@ -12,7 +12,6 @@ def set_schema(client):
             user_id
             reviewed_products
         }
-
         type Product {
             product_id
             recommended_for
@@ -20,17 +19,14 @@ def set_schema(client):
             reviews
             rating
         }
-
         type Suggestions {
             user_id
             suggestions        
         }
-
         type Feedback {
             user_id
             recommendation_feedback
         }
-
 
         user_id: string @index(exact).
         reviewed_products: [uid] @reverse . # Edge to Product with facets {rating, review_text}
@@ -143,7 +139,6 @@ def load_products(file_path):
                     'price': row['price'],
                     'recommended_forus': row['recommended_forus'],
                     'related_product': row['related_product'],
-                    'review':row['review'],
                     'rating':row['rating']
                 })
             resp = txn.mutate(set_obj=products)
@@ -198,9 +193,10 @@ def load_feedback(file_path):
             for row in reader:
                 products.append({
                     'uid': '_:' + row['feedback_id'],
+                    'product_id':row['product_id'],
                     'feedback_id':row['feedback_id'],
-                    'feedback': row['feedback'],
-                    'product_id':row['product_id']
+                    'feedback': row['feedback']
+                    
                 })
             resp = txn.mutate(set_obj=products)
         txn.commit()
@@ -229,21 +225,27 @@ def create_edges_related(file_path, product_uids, supplier_uids): #related
         txn.discard()
 
 
-def create_edges_feedback(file_path, product_uids, feedback_uids): #related
+def create_edges_reviews(file_path, product_uids, feedback_uids): # reviews
     txn = client.txn()
     try:
         with open(file_path, 'r') as file:
             reader = csv.DictReader(file)
             for row in reader:
-                product= row['product_id']
-                feed = row['feedback_id']
+                product = row['product_id']
+                feedback = row['feedback_id']
+                feedback_text = row['feedback']
+                
                 mutation = {
                     'uid': product_uids[product],
-                    'reviews': {
-                        'uid': feedback_uids[feed]
-                    }
+                    'reviews': [
+                        {
+                            'feedback_id': feedback,
+                            'feedback': feedback_text
+                        }
+                    ]
                 }
-                txn.mutate(set_obj=mutation)
+                print("id", feedback_text)
+                txn.mutate(set_obj=mutation)  # Mutate the reviews field with feedback
         txn.commit()
     finally:
         txn.discard()
@@ -260,7 +262,7 @@ def create_edges_recommended(file_path, product_uids, supplier_uids): #recommend
                 mutation = {
                     'uid': supplier_uids[supplier],
                     'recommended_for': {
-                        'uid': product_uids[product]
+                        'user_id': product_uids[product]
                     }
                 }
                 txn.mutate(set_obj=mutation)
@@ -292,26 +294,32 @@ def product_query(client, name):
     query = """query search_product($a: string) {
         all(func: eq(product_id, $a)) {
             product_id
-            recommended_to{
-                User_id
+            reviews{
+                feedback_id
+                feedback           
+            }
+            recommended_for{
+                user_id
             }
             related_products {
                 product_id
             }
-            review{
-                feedback           
-            }
             rating
         }
     }"""
-
     variables = {'$a': name}
     res = client.txn(read_only=True).query(query, variables=variables)
     ppl = json.loads(res.json)
     unique_products = {}
-    unique_products = {product['product_id']: product for product in ppl['all']}
 
-    print(f"Data associated with {name}:\n{json.dumps(unique_products, indent=2)}")
+    for product in ppl['all']:
+        product_id = product['product_id']
+        related_products = tuple([rp['product_id'] for rp in product.get('related_products', [])])
+        unique_key = (product_id, related_products)
+        if unique_key not in unique_products:
+            unique_products[unique_key] = product
+    unique_products_list = list(unique_products.values())
+    print(f"Data associated with {name} (unique products):\n{json.dumps({'all': unique_products_list}, indent=2)}")
 
 
 
@@ -326,5 +334,5 @@ feedback_uids=load_feedback('./Models/feedback.csv')
 create_edges_related('./Models/products.csv', product_uids, product_uids)
 create_edges_reviewed('./Models/reviews.csv', product_uids, user_uids)
 create_edges_recommended('./Models/products.csv', product_uids, product_uids)
-create_edges_feedback('./Models/feedback.csv',product_uids, feedback_uids)
+create_edges_reviews('./Models/feedback.csv',product_uids, feedback_uids)
 # Call your query functions here
