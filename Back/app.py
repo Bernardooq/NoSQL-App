@@ -1,10 +1,38 @@
+import argparse
+import logging
+import os
 import requests
+import random
+
+import datetime
+import logging
+import random
 
 API_URL = "http://127.0.0.1:8000" 
 global user
 user = {}
+#RCONEXION CON CASSANDRA
+from cassandra.cluster import Cluster
+from Models import mongoModel, cassandraModel, dgraphModel
+# Set logger
+log = logging.getLogger()
+log.setLevel('INFO')
+handler = logging.FileHandler('3_lab.log')
+handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s"))
+log.addHandler(handler)
+
+# Read env vars releated to Cassandra App
+CLUSTER_IPS = os.getenv('CASSANDRA_CLUSTER_IPS', 'localhost')
+KEYSPACE = os.getenv('CASSANDRA_KEYSPACE', 'ecommerce')
+REPLICATION_FACTOR = os.getenv('CASSANDRA_REPLICATION_FACTOR', '1')
+
+log.info("Connecting to Cluster")
+cluster = Cluster(CLUSTER_IPS.split(','))
+session = cluster.connect()
+
 
 def main_menu():
+    session.set_keyspace(KEYSPACE)
     while True:
         print("\n--- Welcome to the Store App ---")
         print("1. Profile Management")
@@ -22,9 +50,11 @@ def main_menu():
         print("5. Product Management")
         print("   5.1. Sell New Products")
         print("   5.2. My Products")
-        print("   5.3. Update Product")
-        print("   5.4. Delete Product")
+        print("   5.3. Product Analytics")
+        print("   5.4. Update Product")
+        print("   5.5. Delete Product")
         print("6. Reviews and Ratings")
+        print("7. Promotions")
         print("0. Exit")
         
         choice = input("Select an option: ")
@@ -61,6 +91,8 @@ def main_menu():
         elif choice == "5.2":
             view_my_products()
         elif choice == "5.3":
+            seller_statics()
+        elif choice == "5.3":
             update_product()
         elif choice == "5.4":
             delete_product()
@@ -68,6 +100,8 @@ def main_menu():
         # Reviews and Ratings
         elif choice == "6":
             leave_reviews_and_ratings()
+        elif choice == "7":
+            promotion()
 
         # Exit
         elif choice == "0":
@@ -76,6 +110,20 @@ def main_menu():
 
         else:
             print("Invalid choice. Please try again.")
+
+        
+
+def search_bar(userid):
+    rows = cassandraModel.get_all_search_history_by_user(session, userid)
+    for row in rows:
+        print(row.search_query)
+
+def seller_statics():
+    product = input("Insert your product id to see some details of it: ")
+    cassandraModel.get_stock_level_by_product(session, product)
+    cassandraModel.get_product_analytics(session, product)
+
+    
 
 def see_profile():
     print("\n--- See Profile ---")
@@ -132,7 +180,6 @@ def user_login():
         print("Login failed:", response)
         return False
 
-
 def update_profile():
     print("\n--- Update Profile (leave blank to keep current) ---")
     new_username = input("New username: ")
@@ -155,7 +202,21 @@ def update_profile():
 
 import requests
 
-API_URL = "http://localhost:8000"  # Cambia la URL según corresponda
+
+def promotion():
+    o = int(input("1. If you want to create a promotion \n2. If you want to see the latest promotions\n"))
+    if o == 1:
+        code = input("Insert promo code: ")
+        dis = int(input("Insert discount percentage: "))
+        product_id = input("Insert product id: ")
+        start_date = datetime.datetime.now()
+        end_date = start_date + datetime.timedelta(days=random.randint(5, 30))
+        cassandraModel.insert_promotions(session, code, dis, str(product_id), start_date,  end_date)
+    if o == 2:
+        code = input("Search the promotions you are looking for: ")
+        cassandraModel.get_promotion_details(session, code)
+
+    print("\n--- PROMOTIONS ---")
 
 def view_product_catalog():
     current_page = 1
@@ -191,12 +252,17 @@ def view_product_catalog():
             break
 
 
+
+
 def create_purchase_order():
     print("\n--- Create Purchase Order ---")
     user_id = input("User ID: ")
     product_id = input("Product ID: ")
     quantity = int(input("Quantity: "))
     payment_method = input("Payment Method (Card/Paypal): ")
+
+    order_id = str(random.randint(1000, 9999))
+    cassandraModel.insert_purchase_order(session, user["email"], order_id, product_id, quantity, quantity*780, payment_method)
 
     response = requests.post(f"{API_URL}/orders", json={
         "user_id": user_id,
@@ -292,7 +358,10 @@ def leave_reviews_and_ratings():
 
 def search_products():
     print("\n--- Search Products ---")
+    print("Recently searched:" )
+    search_bar(user["email"])
     query = input("Enter product name or keyword: ")
+    cassandraModel.insert_search_history(session, user["email"], query, "id")
     response = requests.get(f"{API_URL}/search", params={"q": query})
     if response.status_code == 200:
         products = response.json()
@@ -423,11 +492,20 @@ def delete_product():
         print(f"Failed to delete product. Error: {deleted.status_code} - {deleted.text}")
 
 
+
 def logout():
     print("You have been logged out.")
 
 
 def menu():
+    log.info("Connecting to Cluster")
+    cluster = Cluster(CLUSTER_IPS.split(','))
+    session = cluster.connect()
+
+    cassandraModel.create_keyspace(session, KEYSPACE, REPLICATION_FACTOR)
+    session.set_keyspace(KEYSPACE)
+
+    cassandraModel.create_schema(session)
     menu1flag = True
     menu2flag = False
     while(menu1flag):
