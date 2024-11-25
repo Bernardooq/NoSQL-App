@@ -105,28 +105,30 @@ def add_product_to_seller(mongodb_database, user_email, product_id):
         raise
 
 
-def remove_product_from_seller(mongodb_database, user_email, product_id):
+def remove_product_from_seller(mongodb_database, product_id, user_email):
     try:
-        user = mongodb_database.users.find_one({"email": user_email})
-        if not user:
-            print("User not found")
-            return None
+        user_email = str(user_email)
+        product_id = ObjectId(product_id)  
+
         result = mongodb_database.users.update_one(
             {"email": user_email},
-            {"$pull": {"products": product_id}}  
+            {"$pull": {"products": product_id}}
         )
-        if result.modified_count > 0:
-            print(f"Product with ID {product_id} removed from user {user_email}")
-            remove_product(mongodb_database, product_id)
-        else:
-            print("No changes made to the user's product list")
+
+        print(f"Modified count: {result.modified_count}")
+        return result.modified_count > 0
     except Exception as e:
         print(f"Error removing product from seller: {e}")
-        raise
+        return False
+
 
 def remove_product(mongodb_database, product_id):
-    product_id = ObjectId(product_id)
-    mongodb_database.products.remove({"id": product_id})
+    try:
+        result = mongodb_database.products.delete_one({"_id": ObjectId(product_id)})
+        return result
+    except Exception as e:
+        print(f"Error deleting product: {e}")
+        return False
 
 def update_product(mongodb_database, product_id, productUpdate):
     product=find_product(mongodb_database, product_id)

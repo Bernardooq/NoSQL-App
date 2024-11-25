@@ -163,9 +163,15 @@ def editProduct(pid: str, newProduct: dict):
 def deleteProduct(pid: str, email: str):
     try:
         db = app.mongodb_database
-        deleted= mongoModel.remove_product_from_seller(db, email, pid)
-        if deleted:
-            return {"message": "Product deleted succesfully"}
-        else: raise HTTPException(status_code=404, detail=deleted)
+        product_removed = mongoModel.remove_product_from_seller(db, pid, email)
+        if not product_removed:
+            raise HTTPException(status_code=404, detail="Product not found or could not be removed from user.")
+        
+        product_deleted = mongoModel.remove_product(db, pid)
+        if product_deleted.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Product not found in products collection.")
+        
+        return {"message": "Product deleted successfully"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail="Internal server error: " + str(e))
+        print(f"Error in deleteProduct: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")

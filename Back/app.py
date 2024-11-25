@@ -311,8 +311,10 @@ def delete_product():
     idproduct = input("Product ID: ")
     deleted = requests.delete(f"{API_URL}/deleteproduct/{idproduct}?email={user['email']}")
     if deleted.status_code == 200:
-        print("Success")
-    else: print("Failed to delete product")
+        print("Product deleted successfully.")
+    else:
+        print(f"Failed to delete product. Error: {deleted.status_code} - {deleted.text}")
+
 
 def logout():
     print("You have been logged out.")
