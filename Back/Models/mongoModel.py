@@ -25,6 +25,15 @@ class UserLogin(BaseModel):
     email: str
     password: str
 
+class Wishlist(BaseModel):
+    email: str
+    products: list = []
+
+class Cart(BaseModel):
+    _id: str
+    products: list = []
+
+
 # Mongo connection
 def init_mongo(mongo_uri, db_name):
     client = MongoClient(mongo_uri)
@@ -176,6 +185,7 @@ def show_product_list(mongodb_database, skip=None, pagesize=None):
                     "description": product["description"],
                     "price": product["price"],
                     "image": product["image"],
+                    "_id": str(product["_id"]),
                 }
                 for product in products_cursor
             ]
@@ -199,6 +209,7 @@ def search_products(mongodb_database, query):
                 "description": product["description"],
                 "price": product["price"],
                 "image": product["image"],
+                "_id": str(product["_id"]),
             }
             for product in products_cursor
         ]
@@ -209,108 +220,186 @@ def search_products(mongodb_database, query):
    
 
 
-from pymongo.errors import PyMongoError
-
-def add_to_cart(mongodb_database, email, product):
+def remove_from_cart(mongodb_database, email, product_id):
     try:
-        cart_item = mongodb_database.carts.find_one({"email": email, "product_id": product["product_id"]})
-        
-        if cart_item:
-            mongodb_database.carts.update_one(
-                {"email": email, "product_id": product["product_id"]},
-                {"$inc": {"quantity": product.get("quantity", 1)}}
-            )
+        if not isinstance(product_id, ObjectId):
+            product_id = ObjectId(product_id)
+
+        result = mongodb_database.carts.update_one(
+            {"email": email},
+            {"$pull": {"products": {"product_id": product_id}}}
+        )
+        if result.modified_count > 0:
+            return True
         else:
-            new_item = {
-                "email": email,
-                "product_id": product["product_id"],
-                "product_name": product["product_name"],
-                "quantity": product.get("quantity", 1),
-                "price": product["price"]
-            }
-            mongodb_database.carts.insert_one(new_item)
-    except PyMongoError as e:
-        print(f"Error adding product to cart in MongoDB: {e}")
-        raise
+            return False
+    except Exception as e:
+        print(f"Error removing from cart: {e}")
+        return False
 
-# Get User shopping cart
-def get_user_cart(mongodb_database, email):
+    
+def edit_cart(mongodb_database, email, product_id, new_quantity):
     try:
-        cart_items = list(mongodb_database.carts.find({"email": email}))
-        return cart_items  
-    except PyMongoError as e:
-        print(f"Error getting user cart from MongoDB: {e}")
-        raise
+        if not isinstance(product_id, ObjectId):
+            product_id = ObjectId(product_id)
 
-# Edit User shopping cart
-def edit_user_cart(mongodb_database, email, new_cart):
-    try:
-        if new_cart["quantity"] == 0:
-            mongodb_database.carts.delete_one({"email": email, "product_id": new_cart["product_id"]})
+        if int(new_quantity) <= 0:
+            return remove_from_cart(mongodb_database, email, product_id)
+
+        result = mongodb_database.carts.update_one(
+            {"email": email, "products.product_id": product_id},
+            {"$set": {"products.$.quantity": new_quantity}}
+        )
+        if int(result.modified_count) > 0:
+            return True
         else:
-            mongodb_database.carts.update_one(
-                {"email": email, "product_id": new_cart["product_id"]},
-                {"$set": {"quantity": new_cart["quantity"]}}
+            return False
+    except Exception as e:
+        print(f"Error editing cart: {e}")
+        return False
+
+
+def view_cart(mongodb_database, email):
+    try:
+        cart = mongodb_database.carts.find_one({"email": email})
+        if not cart or not cart.get("products"):
+            return {"items": []}
+
+        product_ids = [product["product_id"] for product in cart["products"]]
+        products = mongodb_database.products.find({"_id": {"$in": product_ids}})
+
+        cart_details = []
+        for product in cart["products"]:
+            product_info = next((p for p in products if p["_id"] == product["product_id"]), {})
+            cart_details.append({
+                "product_id": str(product["product_id"]),
+                "name": product_info.get("name", "Unknown"),
+                "price": product_info.get("price", 0.0),
+                "quantity": product["quantity"]
+            })
+
+        return {"items": cart_details}
+    except Exception as e:
+        print(f"Error viewing cart: {e}")
+        return {"items": []} 
+
+
+def add_to_cart(mongodb_database, email, product_id, quantity=1):
+    try:
+        if not isinstance(product_id, ObjectId):
+            product_id = ObjectId(product_id)
+        cart = mongodb_database.carts.find_one({"email": email})
+        if not cart:
+            cart = {"email": email, "products": []}
+            mongodb_database.carts.insert_one(cart)
+
+        existing_product = next((product for product in cart["products"] if product["product_id"] == product_id), None)
+
+        if existing_product:
+            new_quantity = existing_product["quantity"] + quantity
+            result = mongodb_database.carts.update_one(
+                {"email": email, "products.product_id": product_id},
+                {"$set": {"products.$.quantity": new_quantity}}
             )
-    except PyMongoError as e:
-        print(f"Error updating user cart in MongoDB: {e}")
-        raise
+            if result.modified_count > 0:
+                return {"message": "Product quantity updated successfully."}
+            else:
+                return {"message": "Failed to update product quantity."}
+        else:
+            result = mongodb_database.carts.update_one(
+                {"email": email},
+                {"$push": {"products": {"product_id": product_id, "quantity": quantity}}}
+            )
+            if result.modified_count > 0:
+                return {"message": "Product added to cart successfully."}
+            else:
+                return {"message": "Failed to add product to cart."}
+
+    except Exception as e:
+        print(f"Error adding product to cart: {e}")
+        return {"message": "Error adding product to cart."}
 
 
 # Insert product at wishlist
-def add_to_wishlist(mongodb_database, email, product):
+def add_to_wishlist(mongodb_database, email, product_id):
     try:
-        wishlist_item = {
-            "email": email,
-            "product_id": product,
-            "date_added": datetime.now()
-        }
-        mongodb_database.wishlist.insert_one(wishlist_item)
-    except Exception as e:
-        print(f"Error adding product to wishlist in MongoDB: {e}")
-        raise
+        if not isinstance(product_id, ObjectId):
+            product_id = ObjectId(product_id) 
+        if not mongodb_database.products.find_one({"_id": product_id}): return False
+        wishlist = mongodb_database.wishlist.find_one({"email": email})
+        if not wishlist:
+            mongodb_database.wishlist.insert_one({
+                "email": email,
+                "products": [{"product_id": product_id}]
+            })
+            return {"message": "Product added to wishlist."}
+        existing_product = next((p for p in wishlist["products"] if p["product_id"] == product_id), None)
+        if existing_product:
+            return {"message": "Product already added to wishlist"}
+        
+        result = mongodb_database.wishlist.update_one(
+            {"email": email},
+            {"$push": {"products": {"product_id": product_id}}}
+        )
 
-from pymongo.errors import PyMongoError
-from datetime import datetime
+        if result.modified_count > 0:
+            return {"message": "Product added to wishlist."}
+        else:
+            return False
+    
+    except Exception as e:
+        print(f"Error adding to wishlist: {e}")
+        return False
 
 # Get user wishlist
 def get_user_wishlist(mongodb_database, email):
     try:
-        wishlist_items = list(mongodb_database.wishlist.find({"email": email}))
-        return wishlist_items
-    except PyMongoError as e:
-        print(f"Error getting user wishlist from MongoDB: {e}")
-        raise
+        wishlist = mongodb_database.wishlist.find_one({"email": email})
+        if not wishlist or not wishlist.get("products"):
+            return {"items": []}  
+        product_ids = [product["product_id"] for product in wishlist["products"]]
+        
+        products = list(mongodb_database.products.find({"_id": {"$in": product_ids}}))
 
-# Edit user wishlist
-def edit_user_wishlist(mongodb_database, email, product):
-    try:
-        wishlist_item = mongodb_database.wishlist.find_one({"email": email, "product_id": product["product_id"]})
+        wishlist_details = []
+        for product in wishlist["products"]:
+            product_info = next((p for p in products if str(p["_id"]) == str(product["product_id"])), None)
+            if product_info:
+                wishlist_details.append({
+                    "product_id": str(product["product_id"]),
+                    "name": product_info.get("name", "Unknown"),
+                    "price": product_info.get("price", 0.0),
+                    "description": product_info.get("description", "No description available"),
+                })
 
-        if wishlist_item:
-            return("Already on the list")
-        else:
-            new_item = {
-                "email": email,
-                "product_id": product["product_id"],
-                "product_name": product["product_name"],
-                "added_date": datetime.now()
-            }
-            mongodb_database.wishlist.insert_one(new_item)
-    except PyMongoError as e:
-        print(f"Error updating user wishlist in MongoDB: {e}")
-        raise
+        return {"items": wishlist_details}  
+    except Exception as e:
+        print(f"Error viewing wishlist: {e}")
+        return {"items": []}  
+
 
 def delete_from_wishlist(mongodb_database, email, product_id):
     try:
-        result = mongodb_database.wishlist.delete_one({"email": email, "product_id": product_id})
-        if result.deleted_count > 0:
-            return "Product successfully removed from wishlist."
+        if not isinstance(product_id, ObjectId):
+            product_id = ObjectId(product_id)
+        wishlist = mongodb_database.wishlist.find_one({"email": email})
+
+        if not wishlist:
+            return {"message": "Wishlist not found."}
+
+        result = mongodb_database.wishlist.update_one(
+            {"email": email},
+            {"$pull": {"products": {"product_id": product_id}}}
+        )
+
+        if result.modified_count > 0:
+            return {"message": "Product removed from wishlist."}
         else:
-            return "Product not found in the wishlist."
-    except PyMongoError as e:
-        print(f"Error deleting product from wishlist in MongoDB: {e}")
-        raise
+            return False
+
+    except Exception as e:
+        print(f"Error deleting from wishlist: {e}")
+        return False
 
 # Update user info
 def update_user_info(mongodb_database, email, updated_info):
@@ -324,7 +413,7 @@ def update_user_info(mongodb_database, email, updated_info):
         )
         if result.matched_count == 0:
             print(f"No user found with email: {email}")
-    except PyMongoError as e:
+    except Exception as e:
         print(f"Error updating user info in MongoDB: {e}")
         raise
 
@@ -342,7 +431,7 @@ def add_return_request(mongodb_database, order_id, product_id, reason):
             "request_date": datetime.now()
         }
         mongodb_database.returns.insert_one(return_request)
-    except PyMongoError as e:
+    except Exception as e:
         print(f"Error inserting return request into MongoDB: {e}")
         raise
 

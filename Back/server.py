@@ -194,8 +194,73 @@ def get_products(page: int , page_size: int ):
 def search_products(q: str):
     db= app.mongodb_database
     try:
-        # Realizar la búsqueda en la base de datos usando mongoModel
         products = mongoModel.search_products(db, q)
         return products
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+@app.get("/cart/{email}", status_code=200)
+def cart_products(email: str):
+    db= app.mongodb_database
+    try:
+        list_products = mongoModel.view_cart(db, email)
+        return list_products
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server")
+    
+@app.post("/addtocart/{pid}/{email}", status_code=201)
+def add_to_cart(email: str, pid: str):
+    db = app.mongodb_database
+    try:
+        mongoModel.add_to_cart(db, email, pid)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
+
+@app.delete("/deletefromcart/{pid}/{email}", status_code=200)
+def remove_from_cart(email: str, pid: str):
+    try:
+        db=app.mongodb_database
+        mongoModel.remove_from_cart(db, email, pid)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
+
+
+@app.put("/editcart/{pid}/{newamount}/{email}", status_code=200)
+def edit_cart(email: str, newamount: str, pid: str):
+    try:
+        db=app.mongodb_database
+        mongoModel.edit_cart(db, email, pid, newamount)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
+
+
+@app.post("/addtowishlist/{product_id}/{email}", status_code=201)
+def add_to_wishlist_endpoint(email: str, product_id: str):
+    db = app.mongodb_database
+    try:
+        result = mongoModel.add_to_wishlist(db, email, product_id)
+        if not result:
+            raise HTTPException(status_code=404, detail=f"Product not found")
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
+
+@app.delete("/deletefromwishlist/{product_id}/{email}", status_code=200)
+def delete_from_wishlist_endpoint(email: str, product_id: str):
+    db = app.mongodb_database
+    try:
+        result = mongoModel.delete_from_wishlist(db, email, product_id)
+        if not result:
+            raise HTTPException(status_code=404, detail=f"Product not found")
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
+
+@app.get("/viewwishlist/{email}", status_code=200)
+def view_wishlist(email: str):
+    db = app.mongodb_database
+    try:
+        result = mongoModel.get_user_wishlist(db, email)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {e}")

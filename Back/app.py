@@ -154,7 +154,7 @@ def view_product_catalog():
                 print("No products available.")
                 break
             for product in products:
-                print(f"{product['name']} - ${product['price']} --- Description: {product['description']}")
+                print(f'{product["name"]} - ${product["price"]} -- {product["_id"]} --- Description: {product["description"]}')
 
             print("\nOptions:")
             print("1. Next Page")
@@ -207,16 +207,44 @@ def view_purchase_history():
         print("Failed to retrieve purchase history:", response.json())
 
 def manage_shopping_cart():
-    print("\n--- Shopping Cart ---")
-    user_id = input("User ID: ")
-    response = requests.get(f"{API_URL}/cart/{user_id}")
-    if response.status_code == 200:
-        cart = response.json()
-        for item in cart['items']:
-            print(f"{item['product_name']} x{item['quantity']} - ${item['price']}")
-        print("Total:", cart['total'])
-    else:
-        print("Failed to retrieve cart:", response.json())
+    while True:
+        print("\n--- Shopping Cart ---")
+        email = user["email"]
+        response = requests.get(f"{API_URL}/cart/{email}")
+        if response.status_code == 200:
+            cart = response.json()
+            if cart["items"]:
+                print("\nYour Cart:")
+                for i, item in enumerate(cart["items"], start=1):
+                    print(f"{i}. {item['name']} x{item['quantity']} - ${item['price']} - UUID: {item['product_id']}")
+            else:
+                print("\nYour cart is empty.")
+        else:
+            print("Failed to retrieve cart:", response.json())
+            break
+
+        print("\n--- Menu ---")
+        print("1. Add product to cart")
+        print("2. Remove product from cart")
+        print("3. Update product quantity in cart")
+        print("4. Exit")
+
+        choice = input("Choose an option: ")
+        if choice == "1":
+            pid= input("Product ID: ")
+            newresponse = requests.post(f"{API_URL}/addtocart/{pid}/{email}")
+        elif choice == "2":
+            pid= input("Product ID: ")
+            newresponse = requests.delete(f"{API_URL}/deletefromcart/{pid}/{email}")
+        elif choice == "3":
+            pid= input("Product ID: ")
+            newamount= int(input("New amount: "))
+            newresponse = requests.put(f"{API_URL}/editcart/{pid}/{newamount}/{email}")
+        elif choice == "4":
+            print("Exiting shopping cart management.")
+            break
+        else:
+            print("Invalid option. Please try again.")
 
 def manage_user_account():
     print("\n--- User Account ---")
@@ -259,15 +287,51 @@ def search_products():
         print("Search failed:", response.json())
 
 def manage_wishlist():
-    print("\n--- Wishlist ---")
-    user_id = input("User ID: ")
-    response = requests.get(f"{API_URL}/wishlist/{user_id}")
-    if response.status_code == 200:
-        wishlist = response.json()
-        for item in wishlist:
-            print(f"{item['product_name']} added on {item['date_added']}")
-    else:
-        print("Failed to load wishlist:", response.json())
+    while True:
+        print("\n--- Wishlist Management ---")
+        print("1. View Wishlist")
+        print("2. Add Product to Wishlist")
+        print("3. Remove Product from Wishlist")
+        print("4. Exit")
+
+        choice = input("Choose an option: ")
+
+        if choice == "1":
+            email = user["email"]
+            response = requests.get(f"{API_URL}/viewwishlist/{email}")
+            if response.status_code == 200:
+                wishlist = response.json()
+                if wishlist.get("items"):
+                    for item in wishlist["items"]:
+                        print(f"{item['name']} - ${item['price']} - Description: {item['description']} - UUID: {item['product_id']}")
+                else:
+                    print("Your wishlist is empty.")
+            else:
+                print("Failed to load wishlist:", response.json())
+
+        elif choice == "2":
+            email = user["email"]
+            product_id = input("Enter Product ID to add to wishlist: ")
+            response = requests.post(f"{API_URL}/addtowishlist/{product_id}/{email}")
+            if response.status_code == 201:
+                print("Product added to wishlist.")
+            else:
+                print("Failed to add product:", response.json())
+
+        elif choice == "3":
+            email = user["email"]
+            product_id = input("Enter Product ID to remove from wishlist: ")
+            response = requests.delete(f"{API_URL}/deletefromwishlist/{product_id}/{email}")
+            if response.status_code == 200:
+                print("Product removed from wishlist.")
+            else:
+                print("Failed to remove product:", response.json())
+
+        elif choice == "4":
+            print("Exiting wishlist management.")
+            break
+        else:
+            print("Invalid option. Please try again.")
 
 def track_orders():
     print("\n--- Order Tracking ---")
