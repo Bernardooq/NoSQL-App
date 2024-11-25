@@ -20,6 +20,8 @@ def main_menu():
         print("11. Order Tracking")
         print("12. Sell New Products")
         print("13. My Products")
+        print("14. Update product")
+        print("15. Delete My Products")
         print("0. Exit")
         
         choice = input("Select an option: ")
@@ -50,6 +52,10 @@ def main_menu():
             sell_product()
         elif choice == "13":
             view_my_products()
+        elif choice == "14":
+            update_product()
+        elif choice == "15":
+            delete_product()
         elif choice == "0":
             print("Exiting... Goodbye!")
             break
@@ -113,12 +119,11 @@ def user_login():
 
 
 def update_profile():
-    print("\n--- Update Profile ---")
+    print("\n--- Update Profile (leave blank to keep current) ---")
     new_username = input("New username: ")
-    new_password = input("New Password (leave blank to keep current): ")
+    new_password = input("New Password: ")
     address = input("New address: ")
 
-    user_update = {}
     user_update = {}
     if new_username:
         user_update["username"] = new_username
@@ -269,7 +274,45 @@ def view_my_products():
     else:
         print("Failed to view my products:", response)
 
+def update_product():
+    product_update = {}
+    print("\n--- Update product (leave blank to keep current)---")
+    idproduct = (input("Product ID: "))
+    newname= input("New Name :" )
+    newdescription= input("New Description :" )
+    newprice = (input("New Price: ")) 
+    newimage = input("New Image URL: ")
+    newstock = ("New Stock: ")
+    newcategory = input("New Category: ")
 
+    if newname:
+        product_update["name"] = newname
+    if newdescription:
+        product_update["description"] = newdescription
+    if newprice:
+        try:
+            product_update["price"] = float(newprice)
+        except ValueError: print("Product price is not a number")
+    if newcategory:
+        product_update["category"] = newcategory 
+    if newimage:
+        product_update["image"] = newimage
+    if newstock:
+        pass
+    response = requests.put(f"{API_URL}/editproduct/{idproduct}", json=product_update)
+    if response.status_code == 200:
+        print("Success")
+    else:
+        print("Error: " , response.content)
+
+
+def delete_product():
+    print("\n--- Delete Product ---")
+    idproduct = input("Product ID: ")
+    deleted = requests.delete(f"{API_URL}/deleteproduct/{idproduct}?email={user['email']}")
+    if deleted.status_code == 200:
+        print("Success")
+    else: print("Failed to delete product")
 
 def logout():
     print("You have been logged out.")

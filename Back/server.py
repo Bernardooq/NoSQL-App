@@ -141,4 +141,31 @@ def my_products(email: str):
             return "User has no products"  
     except Exception as e:
         raise HTTPException(status_code=500, detail="Internal server error: " + str(e))
+    
+from fastapi import HTTPException, APIRouter
+from pymongo import MongoClient
 
+
+@app.put("/editproduct/{pid}", status_code=200)
+def editProduct(pid: str, newProduct: dict):
+    try:
+        db = app.mongodb_database
+        update_result = mongoModel.update_product(db, pid, newProduct)
+        
+        if update_result:
+            return {"message": "Product updated successfully"}
+        else:
+            raise HTTPException(status_code=404, detail=update_result)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal server error: " + str(e))
+
+@app.delete("/deleteproduct/{pid}", status_code=200)
+def deleteProduct(pid: str, email: str):
+    try:
+        db = app.mongodb_database
+        deleted= mongoModel.remove_product_from_seller(db, email, pid)
+        if deleted:
+            return {"message": "Product deleted succesfully"}
+        else: raise HTTPException(status_code=404, detail=deleted)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal server error: " + str(e))

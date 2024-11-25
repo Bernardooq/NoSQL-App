@@ -117,77 +117,56 @@ def remove_product_from_seller(mongodb_database, user_email, product_id):
         )
         if result.modified_count > 0:
             print(f"Product with ID {product_id} removed from user {user_email}")
+            remove_product(mongodb_database, product_id)
         else:
             print("No changes made to the user's product list")
     except Exception as e:
         print(f"Error removing product from seller: {e}")
         raise
 
-def edit_product(mongodb_database, user_email, product_id, updated_product_data):
-    try:
-        user = mongodb_database.users.find_one({"email": user_email})
-        if not user:
-            print("User not found")
-            return None
-        
-        if product_id not in [str(p) for p in user.get('products', [])]:  # Convertimos los ids a string
-            print(f"Product with ID {product_id} does not belong to user {user_email}")
-            return None
-        
-        product = mongodb_database.products.find_one({"_id": product_id})
-        if not product:
-            print(f"Product with ID {product_id} not found in products collection")
-            return None
+def remove_product(mongodb_database, product_id):
+    product_id = ObjectId(product_id)
+    mongodb_database.products.remove({"id": product_id})
 
-        result = mongodb_database.products.update_one(
-            {"_id": product_id},  
-            {"$set": updated_product_data}  
-        )
-
-        if result.modified_count > 0:
-            print(f"Product with ID {product_id} updated successfully")
+def update_product(mongodb_database, product_id, productUpdate):
+    product=find_product(mongodb_database, product_id)
+    if product:
+        product_id= ObjectId(product_id)
+        updated_product = mongodb_database.products.update_one(
+            {"_id": product_id},
+            {"$set": productUpdate}
+        )       
+        if updated_product.matched_count > 0:
+            return True
         else:
-            print("No changes made to the product")
-    except Exception as e:
-        print(f"Error editing product: {e}")
-        raise
+            return False
+    else:
+        return {"message": "Product not found"}
 
 
 def find_product(mongodb_database, product_id):
-    try:
-        if not isinstance(product_id, ObjectId): 
-            product_id = ObjectId(product_id)
-        product = mongodb_database.products.find_one({"_id": product_id})
+    if not isinstance(product_id, ObjectId): 
+        product_id = ObjectId(product_id)   
+    product = mongodb_database.products.find_one({"_id": product_id})
+    if product:
         return {
             "product_id": str(product["_id"]),
             "name": product["name"],
             "description": product["description"],
             "price": product["price"],
             "image": product["image"]
-
         }
-    except Exception as e:
-        print(f"Error finding product: {e}")
+    else:
         return None
 
 
-def update_product(mongodb_database, product_id, newproduct):
-    try:
-        product= mongodb_database.products.update_one({"_id": product_id,}, 
-            {"$set": newproduct})
-        return product
-    except Exception as e:
-        print("Error updating product")
-# Search Products
+
 def search_products(mongodb_database, query):
-    try:
-        products = mongodb_database.products.find({
-            "$text": {"$search": query}
-        })
-        return list(products)
-    except Exception as e:
-        print(f"Error searching products in MongoDB: {e}")
-        raise
+    products = mongodb_database.products.find({
+        "$text": {"$search": query}
+    })
+    return list(products)
+   
 
 
 from pymongo.errors import PyMongoError
