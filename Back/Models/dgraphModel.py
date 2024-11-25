@@ -290,7 +290,7 @@ def create_edges_reviewed(file_path, product_uids, user_uids): #reviewed
         txn.discard()
 
 
-def product_query(client, name):
+def product_query_reviews(client, id):
     query = """query search_product($a: string) {
         all(func: eq(product_id, $a)) {
             product_id
@@ -298,16 +298,10 @@ def product_query(client, name):
                 feedback_id
                 feedback           
             }
-            recommended_for{
-                user_id
-            }
-            related_products {
-                product_id
-            }
             rating
         }
     }"""
-    variables = {'$a': name}
+    variables = {'$a': id}
     res = client.txn(read_only=True).query(query, variables=variables)
     ppl = json.loads(res.json)
     unique_products = {}
@@ -319,7 +313,32 @@ def product_query(client, name):
         if unique_key not in unique_products:
             unique_products[unique_key] = product
     unique_products_list = list(unique_products.values())
-    print(f"Data associated with {name} (unique products):\n{json.dumps({'all': unique_products_list}, indent=2)}")
+    print(f"Data associated with {id} (unique products):\n{json.dumps({'all': unique_products_list}, indent=2)}")
+
+
+def product_query_related(client, id):
+    query = """query search_product($a: string) {
+        all(func: eq(product_id, $a)) {
+            product_id
+            related_products {
+                product_id
+            }
+        }
+    }"""
+    variables = {'$a': id}
+    res = client.txn(read_only=True).query(query, variables=variables)
+    ppl = json.loads(res.json)
+    unique_products = {}
+
+    for product in ppl['all']:
+        product_id = product['product_id']
+        related_products = tuple([rp['product_id'] for rp in product.get('related_products', [])])
+        unique_key = (product_id, related_products)
+        if unique_key not in unique_products:
+            unique_products[unique_key] = product
+    unique_products_list = list(unique_products.values())
+    print(f"Data associated with {id} (unique products):\n{json.dumps({'all': unique_products_list}, indent=2)}")
+
 
 
 
