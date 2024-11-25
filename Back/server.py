@@ -57,6 +57,8 @@ def shutdown_db_client():
 
 
 # Register User Endpoint
+
+# Register User Endpoint
 @app.post("/register", status_code=201)
 def register_user(user: mongoModel.User):
     db = app.mongodb_database
