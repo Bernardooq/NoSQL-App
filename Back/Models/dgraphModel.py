@@ -216,7 +216,7 @@ def create_edges_related(file_path, product_uids, supplier_uids): #related
                 mutation = {
                     'uid': supplier_uids[supplier],
                     'related_products': {
-                        'uid': product_uids[product]
+                        'related_product_id': product_uids[product]
                     }
                 }
                 txn.mutate(set_obj=mutation)
@@ -244,7 +244,6 @@ def create_edges_reviews(file_path, product_uids, feedback_uids): # reviews
                         }
                     ]
                 }
-                print("id", feedback_text)
                 txn.mutate(set_obj=mutation)  # Mutate the reviews field with feedback
         txn.commit()
     finally:
@@ -317,28 +316,32 @@ def product_query_reviews(client, id):
 
 
 def product_query_related(client, id):
-    query = """query search_product($a: string) {
-        all(func: eq(product_id, $a)) {
-            product_id
+    query = """
+    query getRelatedProducts($productId: string) {
+        related_products(func: eq(product_id, $productId)) {
             related_products {
-                product_id
+                related_product_id
             }
         }
-    }"""
-    variables = {'$a': id}
+    }
+    """
+    variables = {'$productId': id}
+    # Execute query
     res = client.txn(read_only=True).query(query, variables=variables)
-    ppl = json.loads(res.json)
-    unique_products = {}
+    
+    # Decode and load JSON response
+    raw_json = res.json.decode('utf-8') if isinstance(res.json, bytes) else res.json
+    data = json.loads(raw_json) if isinstance(raw_json, str) else raw_json
+    
+    # Extract related_product_id values
+    related_ids = []
+    for product in data.get("related_products", []):
+        for related in product.get("related_products", []):
+            related_id = related.get("related_product_id")
+            if related_id:
+                related_ids.append(related_id)
 
-    for product in ppl['all']:
-        product_id = product['product_id']
-        related_products = tuple([rp['product_id'] for rp in product.get('related_products', [])])
-        unique_key = (product_id, related_products)
-        if unique_key not in unique_products:
-            unique_products[unique_key] = product
-    unique_products_list = list(unique_products.values())
-    print(f"Data associated with {id} (unique products):\n{json.dumps({'all': unique_products_list}, indent=2)}")
-
+    print(related_ids)
 
 
 
