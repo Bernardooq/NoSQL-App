@@ -17,7 +17,8 @@ def print_menu():
         4: "Drop All",
         5: "Exit",
         6: "product query reviews",
-        7: "product query relation"
+        7: "product query relation",
+        8: "product rating"
     }
     for key in mm_options.keys():
         print(key, '--', mm_options[key])
@@ -64,6 +65,10 @@ def main():
         if option == 7:
             price = input("product: ")
             model.product_query_related(client, price)
+        if option == 8:
+            price = input("product: ")
+            model.product_query_rating(client, price)
+
 
 
 

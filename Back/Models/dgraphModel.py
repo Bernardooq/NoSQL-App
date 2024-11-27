@@ -290,37 +290,12 @@ def create_edges_reviewed(file_path, product_uids, user_uids): #reviewed
 
 
 def product_query_reviews(client, id):
-    query = """query search_product($a: string) {
-        all(func: eq(product_id, $a)) {
-            product_id
-            reviews{
-                feedback_id
-                feedback           
-            }
-            rating
-        }
-    }"""
-    variables = {'$a': id}
-    res = client.txn(read_only=True).query(query, variables=variables)
-    ppl = json.loads(res.json)
-    unique_products = {}
-
-    for product in ppl['all']:
-        product_id = product['product_id']
-        related_products = tuple([rp['product_id'] for rp in product.get('related_products', [])])
-        unique_key = (product_id, related_products)
-        if unique_key not in unique_products:
-            unique_products[unique_key] = product
-    unique_products_list = list(unique_products.values())
-    print(f"Data associated with {id} (unique products):\n{json.dumps({'all': unique_products_list}, indent=2)}")
-
-
-def product_query_related(client, id):
     query = """
     query getRelatedProducts($productId: string) {
-        related_products(func: eq(product_id, $productId)) {
-            related_products {
-                related_product_id
+        reviews(func: eq(product_id, $productId)) {
+            product_id
+            reviews {
+                feedback
             }
         }
     }
@@ -335,13 +310,77 @@ def product_query_related(client, id):
     
     # Extract related_product_id values
     related_ids = []
+    for product in data.get("reviews", []):
+        for review in product.get("reviews", []):
+            related_id = review.get("feedback")
+            if related_id:
+                related_ids.append(related_id)
+
+    sets=set(related_ids)
+    print(sets)
+
+
+
+def product_query_related(client, id):
+    query = """
+    query getRelatedProducts($productId: string) {
+        related_products(func: eq(product_id, $productId)) {
+            product_id
+            related_products {
+                related_product_id
+            }
+        }
+    }
+    """
+    variables = {'$productId': id}
+    # Execute query
+    res = client.txn(read_only=True).query(query, variables=variables)
+    
+    # Decode and load JSON response
+    raw_json = res.json.decode('utf-8') if isinstance(res.json, bytes) else res.json
+    data = json.loads(raw_json) if isinstance(raw_json, str) else raw_json
+    
+    # Print the raw data
+    print("Raw data from query:")
+    print(json.dumps(data, indent=2))
+    # Extract related_product_id values
+    related_ids = []
     for product in data.get("related_products", []):
         for related in product.get("related_products", []):
             related_id = related.get("related_product_id")
             if related_id:
                 related_ids.append(related_id)
 
+    sets=set(related_ids)
     print(related_ids)
+    print(sets)
+
+
+def product_query_rating(client, id):
+    query = """
+    query getRelatedProducts($productId: string) {
+        related_products(func: eq(product_id, $productId)) {
+            product_id
+            rating
+        }
+    }
+    """
+    variables = {'$productId': id}
+    # Execute query
+    res = client.txn(read_only=True).query(query, variables=variables)
+    
+    # Decode and load JSON response
+    raw_json = res.json.decode('utf-8') if isinstance(res.json, bytes) else res.json
+    data = json.loads(raw_json) if isinstance(raw_json, str) else raw_json
+    
+    ratings = []
+    for product in data.get("related_products", []):
+        rating = product.get("rating")
+        if rating is not None:
+            ratings.append(rating)
+
+    sets=set(ratings)
+    print(sets)
 
 
 
