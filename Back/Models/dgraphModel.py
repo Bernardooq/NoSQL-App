@@ -135,9 +135,6 @@ def load_products(file_path):
                 products.append({
                     'uid': '_:' + row['product_id'],
                     'product_id':row['product_id'],
-                    'name': row['name'],
-                    'price': row['price'],
-                    'recommended_forus': row['recommended_forus'],
                     'related_product': row['related_product'],
                     'rating':row['rating']
                 })
@@ -192,9 +189,8 @@ def load_feedback(file_path):
             reader = csv.DictReader(file)
             for row in reader:
                 products.append({
-                    'uid': '_:' + row['feedback_id'],
+                    'uid': '_:' + row['product_id'],
                     'product_id':row['product_id'],
-                    'feedback_id':row['feedback_id'],
                     'feedback': row['feedback']
                     
                 })
@@ -203,6 +199,20 @@ def load_feedback(file_path):
     finally:
         txn.discard()
     return resp.uids
+
+def append_to_csv(product_id, feedback):
+    file_name="./Models/feedback.csv"
+    with open(file_name, mode='a', newline='') as file:
+        fieldnames = ['product_id', 'feedback']
+        writer = csv.DictWriter(file, fieldnames=fieldnames)
+        writer.writerow({
+            'product_id': product_id,
+            'feedback': feedback
+        })
+    product_uids = load_products('./Models/products.csv')
+    feedback_uids=load_feedback('./Models/feedback.csv')
+    create_edges_reviews('./Models/feedback.csv',product_uids, feedback_uids)
+
 
 # Function to create edges between products and suppliers
 def create_edges_related(file_path, product_uids, supplier_uids): #related
@@ -232,14 +242,11 @@ def create_edges_reviews(file_path, product_uids, feedback_uids): # reviews
             reader = csv.DictReader(file)
             for row in reader:
                 product = row['product_id']
-                feedback = row['feedback_id']
                 feedback_text = row['feedback']
-                
                 mutation = {
                     'uid': product_uids[product],
                     'reviews': [
                         {
-                            'feedback_id': feedback,
                             'feedback': feedback_text
                         }
                     ]
@@ -307,7 +314,6 @@ def product_query_reviews(client, id):
     # Decode and load JSON response
     raw_json = res.json.decode('utf-8') if isinstance(res.json, bytes) else res.json
     data = json.loads(raw_json) if isinstance(raw_json, str) else raw_json
-    
     # Extract related_product_id values
     related_ids = []
     for product in data.get("reviews", []):

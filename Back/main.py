@@ -18,7 +18,8 @@ def print_menu():
         5: "Exit",
         6: "product query reviews",
         7: "product query relation",
-        8: "product rating"
+        8: "product rating",
+        9: "new review"
     }
     for key in mm_options.keys():
         print(key, '--', mm_options[key])
@@ -68,6 +69,10 @@ def main():
         if option == 8:
             price = input("product: ")
             model.product_query_rating(client, price)
+        if option == 9:
+            price = input("product: ")
+            feedback= input("feedback without comas: ")
+            model.append_to_csv(price, feedback)
 
 
 
