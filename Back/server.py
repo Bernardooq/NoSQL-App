@@ -74,12 +74,18 @@ def register_user(user: mongoModel.User):
 def login_user(user: mongoModel.UserLogin):
     db = app.mongodb_database
     user_data = user.dict()
-    mongoresponse=mongoModel.verify_mongo_user(db, user_data["email"], user_data["password"])
+    mongoresponse = mongoModel.verify_mongo_user(db, user_data["email"], user_data["password"])
     if mongoresponse:
-        return {"message": "User login successfully", "email": mongoresponse["email"], "username": mongoresponse["username"]}
+        return {
+            "message": "User login successfully",
+            "_id": str(mongoresponse["_id"]),  # Convert ObjectId to string
+            "email": mongoresponse["email"],
+            "username": mongoresponse["username"]
+        }
     else:
-        raise HTTPException(status_code=400, detail="Email or password incorrect")
-
+        raise HTTPException(status_code=500, detail="Internal server error")
+        
+       
 @app.put("/users/{email}", status_code=200)
 def update_user_profile(email: str, updates: dict):
     try:
@@ -111,14 +117,16 @@ def add_product(email: str, product: mongoModel.Product):
         productAdded = mongoModel.add_product(db, dictio)
         if productAdded:
             addToSeller=mongoModel.add_product_to_seller(db, email, productAdded["_id"])
+            idp = str(productAdded["_id"])
             if(addToSeller):
-                return "Success"
+                return idp
             else:
                 return "Failed"
         else:
             raise HTTPException(status_code=404, detail="Could not add product")
     except Exception as e:
         raise HTTPException(status_code=500, detail="Internal server error")
+
 
 @app.get("/myproducts/{email}", status_code=200)
 def my_products(email: str): 
@@ -178,6 +186,26 @@ def deleteProduct(pid: str, email: str):
         print(f"Error in deleteProduct: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
+
+@app.delete("/deletecart/{email}", status_code=200)
+def deleteCart(email: str):
+
+    try:
+        db = app.mongodb_database  # Access the MongoDB database
+
+        # Remove the cart for the user
+        result = mongoModel.delete_user_cart(db, email)
+        if result == 0:
+            raise HTTPException(
+                status_code=404, 
+                detail="No cart found for the given user ID."
+            )
+        
+        return {"message": f"Cart for user {email} deleted successfully."}
+    except Exception as e:
+        print(f"Error in deleteCart: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
 @app.get("/products")
 def get_products(page: int , page_size: int ):
     try:
@@ -192,6 +220,18 @@ def get_products(page: int , page_size: int ):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
     
+@app.get("/product/{product_id}", status_code=200)
+def get_product_by_id(product_id: str):
+    db = app.mongodb_database
+    product = mongoModel.find_product(db, product_id)
+    print("Product")
+    print(product_id)
+    print(product)
+    if product:
+        return product
+    else:
+        raise HTTPException(status_code=404, detail="Product not found")
+
 @app.get("/search", status_code=200)
 def search_products(q: str):
     db= app.mongodb_database
