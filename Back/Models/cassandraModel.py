@@ -87,6 +87,19 @@ CREATE_TABLE_FEEDBACK = """
     ) WITH CLUSTERING ORDER BY (time DESC)
 """ 
 
+CREATE_TABLE_ABANDONED_CART = """
+    CREATE TABLE IF NOT EXISTS abandoned_cart (
+        user_id TEXT,  
+        items LIST<TEXT>,
+        time TIMESTAMP,
+        value DECIMAL,
+        PRIMARY KEY ((user_id), time)
+    ) WITH CLUSTERING ORDER BY (time ASC)
+
+"""
+
+
+
 
 
 import uuid
@@ -137,6 +150,12 @@ def bulk_insert(session):
         INSERT INTO feedback (user_id, feedback_text, time, status)
         VALUES (?, ?, ?, ?)
     """)
+
+    abandoned_stmt = session.prepare("""
+        INSERT INTO abandoned_cart (user_id, items, time, value)
+        VALUES (?, ?, ?, ? )
+    """)
+
 
     # Generación de datos
     users = [str(i) for i in range(1, 9)]  # Usar strings para los user_id
@@ -215,6 +234,7 @@ def create_schema(session):
     session.execute(CREATE_TABLE_INVENTORY)
     session.execute(CREATE_TABLE_PROMOTIONS)
     session.execute(CREATE_TABLE_FEEDBACK)
+    session.execute(CREATE_TABLE_ABANDONED_CART)
     print("Schema creation complete")
 
 def create_keyspace(session, keyspace, replication_factor):
@@ -229,15 +249,36 @@ def erase_all_data(session):
     session.execute("DROP TABLE IF EXISTS inventory")
     session.execute("DROP TABLE IF EXISTS promotions")
     session.execute("DROP TABLE IF EXISTS feedback")
+    session.execute("DROP TABLE IF EXISTS abandoned_cart")
 
     print("Tables deleted successfully.")
 
 #PURCHASE ORDER
 #Q1. Query all orders by a user.
-def get_all_orders_by_user(session, user_id):
-    stmt = session.prepare("SELECT * FROM purchase_order WHERE user_id = ?")
-    rows = session.execute(stmt, [user_id])
-    return rows
+def retrieve_user_orders(session, user_id):
+    try:
+        # Prepare the query to fetch all orders for the given user_id
+        stmt = session.prepare("SELECT * FROM purchase_order WHERE user_id = ?")
+        rows = session.execute(stmt, [user_id])
+
+        # Check if any orders are found
+        if not rows:
+            print(f"No purchase orders found for user ID: {user_id}")
+            return
+
+        # Iterate through the rows and print each order in a formatted manner
+        print(f"Purchase Orders for User ID: {user_id}")
+        print("=" * 40)
+        for row in rows:
+            print(f"Order ID          : {row.order_id}")
+            print(f"Product ID        : {row.product_id}")
+            print(f"Quantity          : {row.quantity}")
+            print(f"Total Price       : {row.total_price}")
+            print(f"Payment Method    : {row.payment_method}")
+            print(f"Date              : {row.date}")
+            print("-" * 40)
+    except Exception as e:
+        print(f"An error occurred while fetching purchase orders: {e}")
 
 #Q2. Query total price and payment method for a user's orders within a date range.
 def get_orders_by_date_range(session, user_id, start_date, end_date):
@@ -279,11 +320,11 @@ def get_product_analytics(session, product_id):
         print(f"\n--- Product Analytics for Product ID: {product_id} ---")
 
         for row in rows:
-            print(f"Product ID      : {row.product_id}")
-            print(f"Views           : {row.views}")
-            print(f"Purchases       : {row.purchases}")
-            print(f"Ratings Average : {row.avg_rating:.2f}")
-            print(f"Last Updated    : {row.last_updated}")
+            print(f"Product ID         : {row.product_id}")
+            print(f"Views              : {row.views}")
+            print(f"Total_orders       : {row.total_orders}")
+            print(f"Total_revenue      : {row.total_revenue}")
+            print(f"Up since           : {row.time}")
             print("-" * 40)
     except Exception as e:
         print(f"An error occurred while fetching product analytics: {e}")
@@ -293,6 +334,98 @@ def get_total_revenue_for_all_products(session):
     stmt = session.prepare("SELECT product_id, total_revenue FROM product_analytics")
     rows = session.execute(stmt)
     return rows
+
+
+def increase_views(session, product_ids):
+    # Prepare statements for selecting and updating
+    select_stmt = session.prepare("SELECT total_orders FROM product_analytics WHERE product_id = ?")
+    update_stmt = session.prepare("UPDATE product_analytics SET views = ? WHERE product_id = ? AND total_orders = ?")
+    
+    results = {}  # Dictionary to store results for each product_id
+
+    for product_id in product_ids:
+        # Retrieve total_orders for the current product_id
+        rows = session.execute(select_stmt, [product_id])
+        
+        # Process the results
+        found = False
+        for row in rows:
+            total_orders = row.total_orders
+            found = True
+            #print(f"Product ID: {product_id}, Total Orders: {total_orders}")
+            
+            # Retrieve current views
+            views_stmt = session.prepare("SELECT * FROM product_analytics WHERE product_id = ? AND total_orders = ?")
+            view_rows = session.execute(views_stmt, [product_id, total_orders])
+
+            # Iterate and print each row as a dictionary
+            for row in view_rows:
+                new_views = int(row.views) + 1
+                session.execute(update_stmt, [new_views, product_id, total_orders])
+                
+            
+            break  #
+        
+        if not found:
+            print(f"No records found for product_id: {product_id}")
+            results[product_id] = None  # Indicate no results for this product_id
+    
+    return results  # Return all results as a dictionary
+def increase_orders_and_revenue(session, product_id, order_quantity, price_per_unit):
+    """
+    Increases the total_orders and total_revenue for a given product by the new order quantity.
+    Deletes the old row and inserts a new row with the updated total_orders and total_revenue.
+    """
+    # Prepare the necessary statements for selecting, deleting, and inserting
+    select_stmt = session.prepare("SELECT * FROM product_analytics WHERE product_id = ? AND total_orders = ?")
+    delete_stmt = session.prepare("DELETE FROM product_analytics WHERE product_id = ? AND total_orders = ?")
+    insert_stmt = session.prepare("""
+        INSERT INTO product_analytics (product_id, total_orders, views, total_revenue, time) 
+        VALUES (?, ?, ?, ?, ?)
+    """)
+
+    # Fetch the current total_orders and revenue for the given product_id
+    fetch_stmt = session.prepare("SELECT total_orders, total_revenue FROM product_analytics WHERE product_id = ?")
+    rows = session.execute(fetch_stmt, [product_id])
+
+    for row in rows:
+        total_orders = row.total_orders
+        current_revenue = row.total_revenue
+        #print(f"Product ID: {product_id}, Total Orders (before update): {total_orders}, Total Revenue (before update): {current_revenue}")
+
+        # Calculate the additional revenue from the new order
+        additional_revenue = order_quantity * price_per_unit
+        new_revenue = current_revenue + additional_revenue
+        new_total_orders = total_orders + order_quantity  # Increase total_orders by the new order quantity
+
+        # Fetch detailed row information for the specific product_id and total_orders
+        detail_rows = session.execute(select_stmt, [product_id, total_orders])
+
+        for detail_row in detail_rows:
+            # print("Current Row Details:")
+            # print(detail_row._asdict())  # Print all attributes of the current row
+
+            # Delete the old row with the old total_orders
+            session.execute(delete_stmt, [product_id, total_orders])
+            #print(f"Deleted row for Product ID: {product_id}, Total Orders: {total_orders}")
+
+            # Insert the updated row with the new total_orders and total_revenue
+            session.execute(insert_stmt, [
+                product_id,
+                new_total_orders,
+                detail_row.views,
+                new_revenue,  # Set the updated revenue
+                detail_row.time
+            ])
+            #print(f"Inserted new row for Product ID: {product_id}, Total Orders: {new_total_orders}, Total Revenue: {new_revenue}")
+            return new_total_orders, new_revenue  # Return the updated values
+
+    # If no row was found for the product_id
+    print(f"No records found for product_id: {product_id}")
+    return None, None  # Indicate no results for this product_id
+
+
+
 
 #INVENTORY
 #Q1. Query stock levels for a product.
@@ -367,13 +500,23 @@ def get_feedback_by_date_range(session, start_date, end_date):
 #ABANDONED CARTS
 #Q1. Query abandoned carts by user.
 def get_abandoned_carts_by_user(session, user_id):
-    stmt = session.prepare("SELECT * FROM abandoned_carts WHERE user_id = ?")
+    stmt = session.prepare("SELECT * FROM abandoned_cart WHERE user_id = ?")
     rows = session.execute(stmt, [user_id])
-    return rows
+    
+    abandoned_list = []
+    for row in rows:
+        cart = {
+            "items": row.items,
+            "value": row.value,
+            "time": row.time
+        }
+    abandoned_list.append(cart)
+    
+    return abandoned_list
 
 #Q2. Query abandoned carts within a specific timeframe.
 def get_abandoned_carts_by_timeframe(session, start_date, end_date):
-    stmt = session.prepare("SELECT * FROM abandoned_carts WHERE time >= ? AND time <= ?")
+    stmt = session.prepare("SELECT * FROM abandoned_cart WHERE time >= ? AND time <= ?")
     rows = session.execute(stmt, [start_date, end_date])
     return rows
 
@@ -442,3 +585,25 @@ def insert_feedback(session, user_id, feedback_text, status):
     time = datetime.datetime.now()
     batch.add(feedback_stmt, (user_id, feedback_text, time, status))
     session.execute(batch)
+
+
+def insert_abandoned_cart(session, user_id, items, value):
+    try:
+        # Prepare the statement
+        abandoned_stmt = session.prepare("""
+            INSERT INTO abandoned_cart (user_id, items, time, value)
+            VALUES (?, ?, ?, ?)
+        """)
+        
+        # Current timestamp
+        current_time = datetime.datetime.now()
+
+        # Execute the prepared statement
+        session.execute(
+            abandoned_stmt,
+            [user_id, items, current_time, value]
+        )
+
+        print(f"Abandoned cart added for user_id {user_id} with {len(items)} items at {current_time}")
+    except Exception as e:
+        print(f"An error occurred while inserting into abandoned_cart: {e}")
