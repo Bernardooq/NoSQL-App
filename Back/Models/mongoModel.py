@@ -51,7 +51,8 @@ def add_mongo_user(mongodb_database, user_data):
 # Verify User and password
 def verify_mongo_user(mongodb_database, email, password):
     try:
-        response= mongodb_database.users.find_one({"email": email, "password": password})
+        response = mongodb_database.users.find_one({"email": email, "password": password})
+        print("MongoDB Response:", response)  # Debug statement
         return response
     except Exception as e:
         print(f"Error user not found: {e}")
@@ -64,11 +65,11 @@ def get_mongo_user(mongodb_database, email):
         if user:
             return {
                 "_id": str(user["_id"]),
-                "email": user["email"],
-                "username": user["username"],
-                "address": user["address"], 
-                "created_at": user["created_at"], 
-                "products": [str(product_id) for product_id in user["products"]]
+                "email": user.get("email", "N/A"),
+                "username": user.get("username", "N/A"),
+                "address": user.get("address", "Not provided"),
+                "created_at": user.get("created_at", "N/A"),
+                "products": [str(product_id) for product_id in user.get("products", [])]
             }
         return None
     except Exception as e:
@@ -222,6 +223,31 @@ def search_products(mongodb_database, query):
     except Exception as e:
         print(f"Error searching for products: {e}")
         return []
+    
+def search_product_by_id(mongodb_database, product_id):
+    try:
+        # Convert product_id to ObjectId if necessary
+        product_object_id = product_id
+        # Find the product with the given ID
+        product = mongodb_database.products.find_one({"_id": product_object_id})
+        
+        # If product is found, format and return it
+        if product:
+            result = {
+                "name": product["name"],
+                "description": product["description"],
+                "price": product["price"],
+                "image": product["image"],
+                "_id": str(product["_id"]),
+            }
+            return result
+        else:
+            print(f"Product with ID {product_id} not found.")
+            return None
+    except Exception as e:
+        print(f"Error searching for product by ID: {e}")
+        return None
+
    
 
 # Remove product from cart
@@ -424,3 +450,7 @@ def add_return_request(mongodb_database, order_id, product_id, reason):
         print(f"Error inserting return request into MongoDB: {e}")
         raise
 
+#Abandon cart 
+def delete_user_cart(db, email):
+    result = db.carts.delete_one({"email": email})
+    return result.deleted_count
