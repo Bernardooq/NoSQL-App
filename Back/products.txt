@@ -1,0 +1,150 @@
+ADD THE FOLLOWING QUERY ON MONGO TERMINAL TO POBLATE THE TABLE
+db.products.insertMany([
+  {
+    name: 'Smartphone',
+    description: 'Latest Android smartphone with 128GB storage',
+    price: 899,
+    category: 'phone',
+    image: 'smartphone_img'
+  },
+  {
+    name: 'Laptop',
+    description: 'High-performance laptop with 16GB RAM and 512GB SSD',
+    price: 1200,
+    category: 'laptop',
+    image: 'laptop_img'
+  },
+  {
+    name: 'Smartwatch',
+    description: 'Water-resistant smartwatch with fitness tracking',
+    price: 199,
+    category: 'wearable',
+    image: 'smartwatch_img'
+  },
+  {
+    name: 'Tablet',
+    description: '10-inch tablet with stylus support',
+    price: 350,
+    category: 'tablet',
+    image: 'tablet_img'
+  },
+  {
+    name: 'Bluetooth Speaker',
+    description: 'Portable Bluetooth speaker with 10-hour battery life',
+    price: 70,
+    category: 'audio',
+    image: 'speaker_img'
+  },
+  {
+    name: 'Wireless Earbuds',
+    description: 'Noise-cancelling wireless earbuds with 20-hour battery',
+    price: 120,
+    category: 'audio',
+    image: 'earbuds_img'
+  },
+  {
+    name: '4K Monitor',
+    description: '27-inch 4K UHD monitor for gaming and design',
+    price: 500,
+    category: 'monitor',
+    image: 'monitor_img'
+  },
+  {
+    name: 'Gaming Console',
+    description: 'Next-gen gaming console with 1TB SSD',
+    price: 499,
+    category: 'gaming',
+    image: 'console_img'
+  },
+  {
+    name: 'Smart Home Hub',
+    description: 'Control all your smart home devices from one hub',
+    price: 130,
+    category: 'smart home',
+    image: 'smarthome_img'
+  },
+  {
+    name: 'Robot Vacuum',
+    description: 'Autonomous robot vacuum with mapping technology',
+    price: 350,
+    category: 'appliance',
+    image: 'vacuum_img'
+  },
+  {
+    name: 'Portable Charger',
+    description: 'Power bank with 20,000mAh capacity',
+    price: 40,
+    category: 'accessory',
+    image: 'charger_img'
+  },
+  {
+    name: 'Smart Light Bulb',
+    description: 'Energy-efficient LED bulb with smart controls',
+    price: 25,
+    category: 'smart home',
+    image: 'lightbulb_img'
+  },
+  {
+    name: 'External SSD',
+    description: 'Fast 1TB external solid-state drive',
+    price: 180,
+    category: 'storage',
+    image: 'ssd_img'
+  },
+  {
+    name: 'Virtual Reality Headset',
+    description: 'Immersive VR headset for gaming and entertainment',
+    price: 299,
+    category: 'gaming',
+    image: 'vrheadset_img'
+  },
+  {
+    name: 'Laptop Cooler',
+    description: 'Laptop cooling pad with adjustable fans',
+    price: 40,
+    category: 'accessory',
+    image: 'cooler_img'
+  },
+  {
+    name: 'Digital Camera',
+    description: '12MP digital camera with 4K video recording',
+    price: 350,
+    category: 'camera',
+    image: 'camera_img'
+  },
+  {
+    name: 'Drone',
+    description: 'Foldable drone with 4K camera',
+    price: 500,
+    category: 'camera',
+    image: 'drone_img'
+  },
+  {
+    name: 'Smart Thermostat',
+    description: 'Wi-Fi enabled thermostat with energy-saving features',
+    price: 120,
+    category: 'smart home',
+    image: 'thermostat_img'
+  },
+  {
+    name: 'Gaming Mouse',
+    description: 'Ergonomic gaming mouse with RGB lighting',
+    price: 60,
+    category: 'accessory',
+    image: 'mouse_img'
+  },
+  {
+    name: 'Smart Lock',
+    description: 'Keyless smart lock with remote access',
+    price: 180,
+    category: 'security',
+    image: 'lock_img'
+  },
+  {
+    name: 'E-Reader',
+    description: 'Lightweight e-reader with 8GB storage',
+    price: 130,
+    category: 'book',
+    image: 'ereader_img'
+  }
+])
