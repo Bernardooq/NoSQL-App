@@ -406,7 +406,7 @@ def manage_shopping_cart():
                 print("\nYour Cart:")
                 for i, item in enumerate(cart["items"], start=1):
                     lisIds.append(item['product_id'])
-                    total = total + item['quantity'] * item['price']
+                    total = total + int(item['quantity']) * int(item['price'])
                     print(f"{i}. {item['name']} x{item['quantity']} - ${item['price']} - UUID: {item['product_id']}")
                  
             else:
