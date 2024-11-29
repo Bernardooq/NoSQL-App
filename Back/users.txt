@@ -1,0 +1,122 @@
+db.users.insertMany([
+  {
+    username: 'user1',
+    email: 'user1@example.com',
+    password: 'password1',
+    created_at: ISODate('2024-11-24T15:50:32.067Z'),
+    address: null,
+    products: []
+  },
+  {
+    username: 'user2',
+    email: 'user2@example.com',
+    password: 'password2',
+    created_at: ISODate('2024-11-24T15:51:32.067Z'),
+    address: null,
+    products: []
+  },
+  {
+    username: 'user3',
+    email: 'user3@example.com',
+    password: 'password3',
+    created_at: ISODate('2024-11-24T15:52:32.067Z'),
+    address: null,
+    products: []
+  },
+  {
+    username: 'user4',
+    email: 'user4@example.com',
+    password: 'password4',
+    created_at: ISODate('2024-11-24T15:53:32.067Z'),
+    address: null,
+    products: []
+  },
+  {
+    username: 'user5',
+    email: 'user5@example.com',
+    password: 'password5',
+    created_at: ISODate('2024-11-24T15:54:32.067Z'),
+    address: null,
+    products: []
+  },
+  {
+    username: 'user6',
+    email: 'user6@example.com',
+    password: 'password6',
+    created_at: ISODate('2024-11-24T15:55:32.067Z'),
+    address: null,
+    products: []
+  },
+  {
+    username: 'user7',
+    email: 'user7@example.com',
+    password: 'password7',
+    created_at: ISODate('2024-11-24T15:56:32.067Z'),
+    address: null,
+    products: []
+  },
+  {
+    username: 'user8',
+    email: 'user8@example.com',
+    password: 'password8',
+    created_at: ISODate('2024-11-24T15:57:32.067Z'),
+    address: null,
+    products: []
+  },
+  {
+    username: 'user9',
+    email: 'user9@example.com',
+    password: 'password9',
+    created_at: ISODate('2024-11-24T15:58:32.067Z'),
+    address: null,
+    products: []
+  },
+  {
+    username: 'user10',
+    email: 'user10@example.com',
+    password: 'password10',
+    created_at: ISODate('2024-11-24T15:59:32.067Z'),
+    address: null,
+    products: []
+  },
+  {
+    username: 'user11',
+    email: 'user11@example.com',
+    password: 'password11',
+    created_at: ISODate('2024-11-24T16:00:32.067Z'),
+    address: null,
+    products: []
+  },
+  {
+    username: 'user12',
+    email: 'user12@example.com',
+    password: 'password12',
+    created_at: ISODate('2024-11-24T16:01:32.067Z'),
+    address: null,
+    products: []
+  },
+  {
+    username: 'user13',
+    email: 'user13@example.com',
+    password: 'password13',
+    created_at: ISODate('2024-11-24T16:02:32.067Z'),
+    address: null,
+    products: []
+  },
+  {
+    username: 'user14',
+    email: 'user14@example.com',
+    password: 'password14',
+    created_at: ISODate('2024-11-24T16:03:32.067Z'),
+    address: null,
+    products: []
+  },
+  {
+    username: 'user15',
+    email: 'user15@example.com',
+    password: 'password15',
+    created_at: ISODate('2024-11-24T16:04:32.067Z'),
+    address: null,
+    products: []
+  }
+])
